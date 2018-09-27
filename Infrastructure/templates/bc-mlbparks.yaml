@@ -17,7 +17,7 @@ spec:
   resources: {}
   source:
     git:
-      uri: https://github.com/nexus-Six/openshift-training-advanced-development-homework.git
+      uri: https://github.com/dulecux/advdev_homework.git
     type: Git
   strategy:
     jenkinsPipelineStrategy:
