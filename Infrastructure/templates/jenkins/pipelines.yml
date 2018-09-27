@@ -9,7 +9,7 @@ items:
     source:
       type: "Git"
       git:
-        uri: "https://github.com/mikecroft/openshift-appdev"
+        uri: "https://github.com/dulecux/advdev_homework"
     strategy:
       type: "JenkinsPipeline"
       jenkinsPipelineStrategy:
@@ -22,7 +22,7 @@ items:
     source:
       type: "Git"
       git:
-        uri: "https://github.com/mikecroft/openshift-appdev"
+        uri: "https://github.com/dulecux/advdev_homework"
     strategy:
       type: "JenkinsPipeline"
       jenkinsPipelineStrategy:
@@ -35,7 +35,7 @@ items:
     source:
       type: "Git"
       git:
-        uri: "https://github.com/mikecroft/openshift-appdev"
+        uri: "https://github.com/dulecux/advdev_homework"
     strategy:
       type: "JenkinsPipeline"
       jenkinsPipelineStrategy:
