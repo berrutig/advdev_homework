@@ -39,7 +39,7 @@ podTemplate(label: customSlavePod
                   , extensions: []
                   , submoduleCfg: []
                   , userRemoteConfigs: [[
-                        url: 'https://github.com/mikecroft/openshift-appdev.git'
+                        url: 'https://github.com/dulecux/advdev_homework.git'
                         ]]
                   ])
           }
