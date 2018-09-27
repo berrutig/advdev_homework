@@ -27,7 +27,7 @@ items:
           failurePolicy: ignore
           execNewPod:
             containerName: busybox 
-            command: [ "/usr/bin/curl", " http://mlbparks-f704-parks-dev.apps.na39.openshift.opentlc.com/ws/data/load/" ]
+            command: [ "/usr/bin/curl", " http://mlbparks-89a4-parks-dev.apps.na39.openshift.opentlc.com/ws/data/load/" ]
       type: Rolling
     template:
       metadata:
@@ -37,7 +37,7 @@ items:
           type: parksmap-backend
       spec:
         containers:
-          - image: 'docker-registry.default.svc:5000/f704-parks-dev/mlbparks:0.0-0'
+          - image: 'docker-registry.default.svc:5000/89a4-parks-dev/mlbparks:0.0-0'
             imagePullPolicy: IfNotPresent
             livenessProbe:
               failureThreshold: 3
