@@ -5,7 +5,7 @@
 // 'maven-appdev' has skopeo installed as well.
 
 // Globals
-def GUID = "f704"
+def GUID = "89a4"
 def customSlavePod = "maven-appdev"
 def customSlaveContainer = "docker-registry.default.svc:5000/${GUID}-jenkins/jenkins-slave-maven-appdev"
 def token = "aOJPhBGzCuN-pW4fpnZ6FOEB6m1PM7CJqtDKs67Yegw"      // FIXME: set valid token
