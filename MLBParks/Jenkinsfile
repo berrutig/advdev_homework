@@ -25,7 +25,7 @@ podTemplate(
     
     stage('Checkout Source') {
       echo "Checking out src"
-      git url: 'https://github.com/nexus-Six/openshift-training-advanced-development-homework.git'
+      git url: 'https://github.com/dulecux/advdev_homework.git'
     }
 
     echo "Copying nexus_setting.xml"
