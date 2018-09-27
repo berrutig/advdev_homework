@@ -23,7 +23,7 @@ podTemplate(
 
    def mvnCmd = "mvn -s ./nexus_settings.xml"
     stage('Checkout Source') {
-    git url: 'https://github.com/nexus-Six/openshift-training-advanced-development-homework.git'
+    git url: 'https://github.com/dulecux/advdev_homework.git'
     }
     echo "Copying nexus_setting.xml"
     sh "cp nexus_settings.xml Nationalparks/nexus_settings.xml"
