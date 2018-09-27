@@ -24,7 +24,7 @@ podTemplate(
 
     // Checkout Source Code
     stage('Checkout Source') {
-      git 'https://github.com/paulgreenbank/openshift-app-development.git'
+      git 'https://github.com/dulecux/advdev_homework.git'
     }
 
     // Extract version and other properties from the pom.xml
