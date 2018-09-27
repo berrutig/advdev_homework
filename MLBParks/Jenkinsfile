@@ -1,4 +1,4 @@
-def GUID = "f704"
+def GUID = "89a4"
 def CLUSTER = "na39.openshift.opentlc.com"
 def customSlavePod = "maven-appdev"
 def customSlaveContainer = "docker-registry.default.svc:5000/${GUID}-jenkins/jenkins-slave-maven-appdev"
@@ -39,7 +39,7 @@ podTemplate(label: customSlavePod
                   , extensions: []
                   , submoduleCfg: []
                   , userRemoteConfigs: [[
-                        url: 'https://github.com/mikecroft/openshift-appdev.git'
+                        url: 'https://github.com/dulecux/advdev_homework.git'
                         ]]
                   ])
           }
