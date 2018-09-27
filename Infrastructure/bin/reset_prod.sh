@@ -8,28 +8,34 @@ if [ "$#" -ne 1 ]; then
 fi
 
 GUID=$1
-echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to deploy Green Services on next run"
+echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to Green Services"
 
-## Reseting MLBParks Production to blue deployment ##
-# Delete configmap and re-create with Blue APPNAME
-oc delete configmap mlbparks-config -n ${GUID}-parks-prod --ignore-not-found=true
-oc create configmap mlbparks-config --from-literal=APPNAME='MLB Parks (Blue)' -n ${GUID}-parks-prod
-# Delete and re-create backend service to point to blue deployment
-oc delete service mlbparks -n ${GUID}-parks-prod --ignore-not-found=true
-oc expose dc mlbparks-blue --name=mlbparks --port 8080 --labels=type=parksmap-backend,activeApp=mlbparks-blue -n ${GUID}-parks-prod
+# Code to reset the parks production environment to make
+# all the green services/routes active.
+# This script will be called in the grading pipeline
+# if the pipeline is executed without setting
+# up the whole infrastructure to guarantee a Blue
+# rollout followed by a Green rollout.
 
-## Resetting NationalParks Production to blue deployment ##
-# Delete configmap and re-create with Blue APPNAME
-oc delete configmap nationalparks-config -n ${GUID}-parks-prod --ignore-not-found=true
-oc create configmap nationalparks-config --from-literal=APPNAME='National Parks (Blue)' -n ${GUID}-parks-prod
-# Delete and re-create backend service to point to blue deployment
-oc delete service nationalparks -n ${GUID}-parks-prod --ignore-not-found=true
-oc expose dc nationalparks-blue --name=nationalparks --port 8080 --labels=type=parksmap-backend,activeApp=nationalparks-blue -n ${GUID}-parks-prod
+# To be Implemented by Student
 
-## Resetting ParksMap Production to blue deployment ##
-# Delete configmap and re-create with Blue APPNAME
-oc delete configmap parksmap-config -n ${GUID}-parks-prod --ignore-not-found=true
-oc create configmap parksmap-config --from-literal=APPNAME='ParksMap (Blue)' -n ${GUID}-parks-prod
-# Patch route to point to blue deployment
-oc patch route parksmap -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"parksmap-blue"}}}'
+#oc set route-backends nationalparks-bluegreen mlbparks-green=100 mlbparks-blue=0
+#oc set route-backends parksmap-bluegreen parksmap-green=100 parksmap-blue=0
+#oc set route-backends mlbparks-bluegreen mlbparks-green=100 mlbparks-blue=0
+
+
+oc delete svc/mlbparks-green -n ${GUID}-parks-prod
+oc expose dc/mlbparks-green --port=8080 -l type=parksmap-backend -n ${GUID}-parks-prod
+oc delete svc/mlbparks-blue -n ${GUID}-parks-prod
+oc expose dc/mlbparks-blue --port=8080 -l type=none -n ${GUID}-parks-prod
+
+oc delete svc/nationalparks-green -n ${GUID}-parks-prod
+oc expose dc/nationalparks-green --port=8080 -l type=parksmap-backend -n ${GUID}-parks-prod
+oc delete svc/nationalparks-blue -n ${GUID}-parks-prod
+oc expose dc/nationalparks-blue --port=8080 -l type=none -n ${GUID}-parks-prod
+
+oc patch route parksmap -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"parksmap-green"}}}' || echo "no parksmap route patching necessary"
+
+
+
 
