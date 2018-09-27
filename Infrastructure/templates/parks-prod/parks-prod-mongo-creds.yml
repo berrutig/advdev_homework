@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-creds
+data:
+  DB_HOST: mongodb
+  DB_NAME: parks
+  DB_PASSWORD: mongodb
+  DB_PORT: '27017'
+  DB_REPLICASET: rs0
+  DB_USERNAME: mongodb

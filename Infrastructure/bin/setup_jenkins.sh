@@ -28,36 +28,18 @@ echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cl
 
 # To be Implemented by Student
 
-echo "Granting permissions"
-oc policy add-role-to-user edit system:serviceaccount:$GUID-jenkins:jenkins -n $GUID-jenkins
-oc policy add-role-to-user edit system:serviceaccount:gpte-jenkins:jenkins -n $GUID-jenkins
-
-echo "Creating Jenkins"
-oc new-app ./Infrastructure/templates/jenkins.yaml -n ${GUID}-jenkins
-oc rollout status dc/$(oc get dc -o jsonpath='{ .items[0].metadata.name }' -n ${GUID}-jenkins) --watch -n ${GUID}-jenkins
-
-echo "Create custom maven pod with Skopeo"
-oc new-build --name=jenkins-slave-appdev --dockerfile="$(< ./Dockerfile)" -n ${GUID}-jenkins
-
-echo "Creating mlbparks buildconfiguration with pipeline"
-oc create -f ./Infrastructure/templates/bc-mlbparks.yaml -n ${GUID}-jenkins
-oc cancel-build bc/mlbparks-pipeline -n ${GUID}-jenkins || echo "build not cancelled"
-oc set env bc/mlbparks-pipeline GUID="$GUID" CLUSTER="$CLUSTER" -n ${GUID}-jenkins
-oc start-build bc/mlbparks-pipeline -n ${GUID}-jenkins
-
-echo "Creating nationalparks buildconfiguration with pipeline"
-oc create -f ./Infrastructure/templates/bc-nationalparks.yaml -n ${GUID}-jenkins
-oc cancel-build bc/nationalparks-pipeline -n ${GUID}-jenkins || echo "build not cancelled"
-oc set env bc/nationalparks-pipeline GUID="$GUID" CLUSTER="$CLUSTER" -n ${GUID}-jenkins
-oc start-build bc/nationalparks-pipeline -n ${GUID}-jenkins
-
-echo "Creating parksmap buildconfiguration with pipeline"
-oc create -f ./Infrastructure/templates/bc-parksmap.yaml -n ${GUID}-jenkins
-oc cancel-build bc/parksmap-pipeline -n ${GUID}-jenkins || echo "build not cancelled"
-oc set env buildconfigs/parksmap-pipeline GUID="$GUID" CLUSTER="$CLUSTER" -n ${GUID}-jenkins
-oc start-build bc/parksmap-pipeline -n ${GUID}-jenkins
+function ocn {
+    oc -n $GUID-jenkins $@
+}
 
 
+ocn new-app jenkins-persistent \
+    --param ENABLE_OAUTH=true \
+    --param VOLUME_CAPACITY=4Gi
 
+ocn set resources dc/jenkins --limits=cpu=800m,memory=1Gi --requests=memory=1Gi
 
+# cant use ocn function here because the $@ pattern interprets the dockerfile as separate arguments
+oc -n $GUID-jenkins new-build --name=jenkins-slave-maven-appdev --dockerfile="$(cat ./Infrastructure/templates/jenkins/Dockerfile)"
 
+ocn create -f Infrastructure/templates/jenkins/pipelines.yml

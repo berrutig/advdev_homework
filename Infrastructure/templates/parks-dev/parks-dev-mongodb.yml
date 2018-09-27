@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: List
+items:
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    generation: 2
+    labels:
+      template: mongodb-persistent-template
+    name: mongodb
+  spec:
+    replicas: 1
+    selector:
+      name: mongodb
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: mongodb
+      spec:
+        containers:
+          - env:
+              - name: MONGODB_USER
+                value: mongodb
+              - name: MONGODB_PASSWORD
+                value: mongodb
+              - name: MONGODB_ADMIN_PASSWORD
+                value: mongodb
+              - name: MONGODB_DATABASE
+                value: parks
+              - name: DB_REPLICASET
+                value: rs0
+            image: >-
+              registry.access.redhat.com/rhscl/mongodb-32-rhel7@sha256:58ad73c16aca6c8c1eafcb670d4b692c79ddcb31a3d98814e3fe7498c5702510
+            imagePullPolicy: IfNotPresent
+            livenessProbe:
+              failureThreshold: 3
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              successThreshold: 1
+              tcpSocket:
+                port: 27017
+              timeoutSeconds: 1
+            name: mongodb
+            ports:
+              - containerPort: 27017
+                protocol: TCP
+            readinessProbe:
+              exec:
+                command:
+                  - /bin/sh
+                  - '-i'
+                  - '-c'
+                  - >-
+                    mongo 127.0.0.1:27017/$MONGODB_DATABASE -u $MONGODB_USER -p
+                    $MONGODB_PASSWORD --eval="quit()"
+              failureThreshold: 3
+              initialDelaySeconds: 3
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              limits:
+                memory: 512Mi
+            securityContext:
+              capabilities: {}
+              privileged: false
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+              - mountPath: /var/lib/mongodb/data
+                name: mongodb-data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+          - name: mongodb-data
+            persistentVolumeClaim:
+              claimName: mongodb
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: mongodb
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 4Gi
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      template: mongodb-persistent-template
+    name: mongodb
+  spec:
+    ports:
+      - name: mongo
+        port: 27017
+        protocol: TCP
+        targetPort: 27017
+    selector:
+      name: mongodb
+    sessionAffinity: None
+    type: ClusterIP

@@ -8,55 +8,58 @@ fi
 
 GUID=$1
 echo "Setting up Parks Development Environment in project ${GUID}-parks-dev"
-
 # Code to set up the parks development project.
+#  ✔  5 Set up placeholder deployment configurations for the three microservices
+#  ✔  6 Configure the deployment configurations using the ConfigMaps
+#  ?  7 Set deployment hooks to populate the database for the back end services
+#  ✔  8 Set up liveness and readiness probes
+#  ✔  9 Expose and label the services properly (parksmap-backend)
 
-# To be Implemented by Student
+function ocn {
+    oc -n $GUID-parks-dev $@
+}
 
-echo "Adding permissions"
-oc policy add-role-to-user view --serviceaccount=default -n ${GUID}-parks-dev
-oc policy add-role-to-user edit system:serviceaccount:${GUID}-jenkins:jenkins -n ${GUID}-parks-dev
-oc policy add-role-to-user admin system:serviceaccount:gpte-jenkins:jenkins -n $GUID-parks-dev
+ocn create -f Infrastructure/templates/parks-dev/parks-dev-mongodb.yml
+ocn policy add-role-to-user admin system:serviceaccount:${GUID}-jenkins:jenkins 
 
-echo "Creating Mongo DB"
-oc new-app -f ./Infrastructure/templates/mongo.yaml -n ${GUID}-parks-dev
+ocn create -f Infrastructure/templates/parks-dev/parks-dev-mongo-creds.yml
+# ocn create -f Infrastructure/templates/parks-dev/parks-dev-mlbparks.yml
+# ocn create -f Infrastructure/templates/parks-dev/parks-dev-nationalparks.yml
+# ocn create -f Infrastructure/templates/parks-dev/parks-dev-parksmap.yml
 
-echo "Creating mlbparks app"
-oc new-build --binary=true --name=mlbparks --image-stream=jboss-eap70-openshift:1.7 -n ${GUID}-parks-dev
-oc new-app ${GUID}-parks-dev/mlbparks:latest --name=mlbparks --allow-missing-images -n ${GUID}-parks-dev
-oc set triggers dc/mlbparks --remove-all -n ${GUID}-parks-dev
-oc set probe dc/mlbparks --readiness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n ${GUID}-parks-dev
-oc set probe dc/mlbparks --liveness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n ${GUID}-parks-dev
-oc expose dc mlbparks --port 8080 -n ${GUID}-parks-dev
-oc expose svc mlbparks -n ${GUID}-parks-dev --labels=type="parksmap-backend"
-oc create configmap mlbparks-config --from-literal=APPNAME="MLB Parks (Dev)" -n ${GUID}-parks-dev
-oc set env dc/mlbparks --from=configmap/mlbparks-config -n ${GUID}-parks-dev
-oc set deployment-hook dc/mlbparks -n ${GUID}-parks-dev --post -- curl -s http://mlbparks:8080/ws/data/load/ 
+# Set up parksmap Dev Application
+function establish_app {
 
-echo "Creating nationalparks app"
-oc new-build --binary=true --name="nationalparks" --image-stream=redhat-openjdk18-openshift:1.2 -n ${GUID}-parks-dev
-oc new-app ${GUID}-parks-dev/nationalparks:latest --name=nationalparks --allow-missing-images -n ${GUID}-parks-dev
-oc set triggers dc/nationalparks --remove-all -n ${GUID}-parks-dev
-oc set probe dc/nationalparks --readiness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n ${GUID}-parks-dev
-oc set probe dc/nationalparks --liveness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n ${GUID}-parks-dev
-oc expose dc nationalparks --port 8080 -n ${GUID}-parks-dev
-oc expose svc nationalparks -n ${GUID}-parks-dev --labels=type="parksmap-backend"
-oc create configmap nationalparks-config --from-literal=APPNAME="National Parks (Dev)" -n ${GUID}-parks-dev
-oc set env dc/nationalparks --from=configmap/nationalparks-config -n ${GUID}-parks-dev
-oc set deployment-hook dc/nationalparks -n ${GUID}-parks-dev --post -- curl -s http://nationalparks:8080/ws/data/load/ 
+    # mlbparks is a WAR file
+    if [ $1 = mlbparks ]
+    then
+        ocn new-build jboss-eap70-openshift:1.7 --name=$1 --strategy=source --binary
+    else
+        ocn new-build redhat-openjdk18-openshift:1.2 --name=$1 --strategy=source --binary
+    fi
 
-echo "Creating parksmap app"
-oc new-build --binary=true --name="parksmap" --image-stream=redhat-openjdk18-openshift:1.2 -n ${GUID}-parks-dev
-oc new-app ${GUID}-parks-dev/parksmap:latest --name=parksmap --allow-missing-images -n ${GUID}-parks-dev
-oc set triggers dc/parksmap --remove-all -n ${GUID}-parks-dev
-oc set probe dc/parksmap --readiness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n ${GUID}-parks-dev
-oc set probe dc/parksmap --liveness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n ${GUID}-parks-dev
-oc expose dc parksmap --port 8080 -n ${GUID}-parks-dev
-oc expose svc parksmap -n ${GUID}-parks-dev
-oc create configmap parksmap-config --from-literal=APPNAME="ParksMap (Dev)" -n ${GUID}-parks-dev
-oc set env dc/parksmap --from=configmap/parksmap-config -n ${GUID}-parks-dev
+    # set backend labels
+    if [ $1 = parksmap ]
+    then
+        ocn new-app $GUID-parks-dev/$1:0.0-0 --name=$1 --allow-missing-imagestream-tags=true
+    else
+        ocn new-app $GUID-parks-dev/$1:0.0-0 --name=$1 --allow-missing-imagestream-tags=true --labels=type=parksmap-backend
+    fi
+    ocn set triggers dc/$1 --remove-all
+    ocn set probe dc/$1 --readiness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30
+    ocn set probe dc/$1 --liveness --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30
+    ocn expose dc $1 --port 8080
+    ocn expose svc $1
 
+    # ocn function won't work here, same as elsewhere due to space in the literal
+    oc -n $GUID-parks-dev create configmap $1-config --from-literal="APPNAME=$2 (Dev)"
+    ocn set env dc/$1 --from=configmap/$1-config
+    ocn set env dc/$1 --from=configmap/mongo-creds
+}
 
-
+establish_app parksmap "ParksMap"
+establish_app nationalparks "National Parks"
+establish_app mlbparks "MLB Parks"
 
 
+ocn policy add-role-to-user view --serviceaccount=default
