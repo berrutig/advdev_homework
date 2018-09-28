@@ -56,14 +56,13 @@ objects:
           name: ${SONARQUBE_SERVICE_NAME}-postgresql
       spec:
         containers:
-        - name: postgresql
-          env:
-          - name: POSTGRESQL_USER
-            value: ${SONARQUBE_POSTGRESQL_USER}
-          - name: POSTGRESQL_PASSWORD
-            value: ${SONARQUBE_POSTGRESQL_PASSWORD}
-          - name: POSTGRESQL_DATABASE
-            value: ${SONARQUBE_POSTGRESQL_DATABASE}
+        - env:
+          - name: SONARQUBE_JDBC_PASSWORD
+            value: ${POSTGRESQL_PASSWORD}
+          - name: SONARQUBE_JDBC_URL
+            value: jdbc:postgresql://postgresql-sonarqube/sonar
+          - name: SONARQUBE_JDBC_USERNAME
+            value: sonar
           image: registry.access.redhat.com/rhscl/postgresql-96-rhel7:latest
           imagePullPolicy: IfNotPresent
           ports:
