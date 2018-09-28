@@ -278,14 +278,14 @@ parameters:
   displayName: PostgreSQL Volume Capacity
   name: POSTGRESQL_VOLUME_CAPACITY
   required: true
-  value: 4Gi
+  value: 8Gi
 - description: Volume space available for SonarQube
   displayName: SonarQube Volume Capacity
   name: SONAR_VOLUME_CAPACITY
   required: true
-  value: 4Gi
+  value: 8Gi
 - name: GUID
   displayName: GUID
   description: guid
-  value: ddibarto
+  value: 89a4
 required: true
