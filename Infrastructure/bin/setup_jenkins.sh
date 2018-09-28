@@ -27,24 +27,22 @@ echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cl
 # * CLUSTER: the base url of the cluster used (e.g. na39.openshift.opentlc.com)
 
 # To be Implemented by Student
-oc policy add-role-to-user edit system:serviceaccount:$GUID-jenkins:jenkins -n $GUID-jenkins
-oc policy add-role-to-user edit system:serviceaccount:gpte-jenkins:jenkins -n $GUID-jenkins
 
-oc new-app -f ./Infrastructure/templates/jenkins.template.yaml \
-    --param MEMORY_LIMIT=1Gi \
-    --param JENKINS_VOLUME=1Gi \
-    -n $GUID-jenkins
+oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=2Gi --param VOLUME_CAPACITY=4Gi -n ${GUID}-jenkins
+# Alter resources assigned to pod
+oc rollout pause dc jenkins -n ${GUID}-jenkins
+oc set resources dc jenkins --requests=memory=2Gi,cpu=1 --limits=memory=3Gi,cpu=1 -n ${GUID}-jenkins
+oc rollout resume dc jenkins -n ${GUID}-jenkins
 
-oc rollout status dc/jenkins --watch -n $GUID-jenkins
+# Push Jenkins slave maven image with skopeo support
+#oc process -f ./Infrastructure/templates/maven-slave-template.yaml --param GUID=${GUID} --param CLUSTER=${CLUSTER} | oc create -f - -n ${GUID}-jenkins
+oc new-build -D $'FROM docker.io/openshift/jenkins-slave-maven-centos7:v3.9\nUSER root\nRUN yum -y install skopeo && yum clean all\nUSER 1001' --name=jenkins-slave-maven-appdev -n ${GUID}-jenkins
 
-oc new-build --name=jenkins-slave-appdev \
-    --dockerfile="$(< ./Infrastructure/templates/docker/skopeo/Dockerfile)" \
-    -n $GUID-jenkins
+#docker build ./Infrastructure/extra -t docker-registry-default.apps.${CLUSTER}/${GUID}-jenkins/jenkins-slave-maven-appdev:v3.9
+#docker login -u $(oc whoami) -p $(oc whoami -t) docker-registry-default.apps.${CLUSTER}
+#docker push docker-registry-default.apps.${CLUSTER}/${GUID}-jenkins/jenkins-slave-maven-appdev:v3.9
 
-oc create -f ./Infrastructure/templates/nationalparks.pipeline.yaml -n $GUID-jenkins
-oc create -f ./Infrastructure/templates/mlbparks.pipeline.yaml -n $GUID-jenkins
-oc create -f ./Infrastructure/templates/parksmap.pipeline.yaml -n $GUID-jenkins
-
-oc env bc/nationalparks-pipeline GUID=$GUID CLUSTER=$CLUSTER -n $GUID-jenkins
-oc env bc/mlbparks-pipeline GUID=$GUID CLUSTER=$CLUSTER -n $GUID-jenkins
-oc env bc/parksmap-pipeline GUID=$GUID CLUSTER=$CLUSTER -n $GUID-jenkins
+# Create build config pipelines
+oc process -f ./Infrastructure/templates/mlbparks-pipeline-template.yaml --param REPO=${REPO} --param GUID=${GUID} --param CLUSTER=${CLUSTER} | oc create -f - -n ${GUID}-jenkins
+oc process -f ./Infrastructure/templates/nationalparks-pipeline-template.yaml --param REPO=${REPO} --param GUID=${GUID} --param CLUSTER=${CLUSTER} | oc create -f - -n ${GUID}-jenkins
+oc process -f ./Infrastructure/templates/parksmap-pipeline-template.yaml --param REPO=${REPO} --param GUID=${GUID} --param CLUSTER=${CLUSTER} | oc create -f - -n ${GUID}-jenkins
