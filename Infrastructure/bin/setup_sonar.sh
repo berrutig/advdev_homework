@@ -7,51 +7,30 @@ if [ "$#" -ne 1 ]; then
 fi
 
 GUID=$1
-
 echo "Setting up Sonarqube in project $GUID-sonarqube"
+oc policy add-role-to-user edit system:serviceaccount:$GUID-jenkins:jenkins -n $GUID-sonarqube
+oc policy add-role-to-user edit system:serviceaccount:gpte-jenkins:jenkins -n $GUID-sonarqube
 
 # Code to set up the SonarQube project.
 # Ideally just calls a template
-# oc new-app -f ../templates/sonarqube.yaml --param .....
+# oc new-app -f ./Infrastructure/templates/sonarqube.yaml --param .....
 
 # To be Implemented by Student
-oc project ${GUID}-sonarqube
+oc new-app -f ./Infrastructure/templates/sonarqube.template.yaml\
+  --param POSTGRESQL_USERNAME=sonar\
+  --param POSTGRESQL_PASSWORD=sonar\
+  --param POSTGRESQL_DATABASE=sonar\
+  --param POSTGRESQL_VOLUME=1Gi\
+  --param GUID=$GUID\
+  -n $GUID-sonarqube
+# oc set probe dc/docker-openshift-sonarqube --liveness --get-url=http://:9000/about --initial-delay-seconds=20
+# oc set probe dc/docker-openshift-sonarqube --readiness --get-url=http://:9000/about --initial-delay-seconds=20
+# oc new-app --template=postgresql-persistent --param POSTGRESQL_USER=sonar\
+#   --param POSTGRESQL_PASSWORD=sonar --param POSTGRESQL_DATABASE=sonar\
+#   --param VOLUME_CAPACITY=4Gi --labels=app=sonarqube_db
+# oc new-app https://github.com/wkulhanek/docker-openshift-sonarqube.git
+# oc set env dc/docker-openshift-sonarqube SONARQUBE_JDBC_USERNAME=sonar,SONARQUBE_JDBC_PASSWORD=sonar,SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql/sonar
+# oc expose svc/docker-openshift-sonarqube
+# oc set resources dc/docker-openshift-sonarqube --requests=memory=1.5Gi,cpu=1 --limits=memory=3Gi,cpu=2
 
-# Create new Postgres SQL Application to be used by Sonarqube
-oc new-app --template=postgresql-persistent --param POSTGRESQL_USER=sonar --param POSTGRESQL_PASSWORD=sonar --param POSTGRESQL_DATABASE=sonar --param VOLUME_CAPACITY=4Gi --labels=app=sonarqube_db
 
-# Create Sonarqube image from wkulhanek repo
-oc new-app --docker-image=wkulhanek/sonarqube:6.7.4 --env=SONARQUBE_JDBC_USERNAME=sonar --env=SONARQUBE_JDBC_PASSWORD=sonar --env=SONARQUBE_JDBC_URL=jdbc:postgresql://postgresql/sonar --labels=app=sonarqube
-
-# Pause Sonarqube rollout
-oc rollout pause dc sonarqube
-
-# Expose service as sonarqube
-oc expose service sonarqube
-
-# Create Persistent Volume Claim to be used by Sonar Qube
-echo "apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: sonarqube-pvc
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 4Gi" | oc create -f -
-
-# Set/Claim volume for Sonar qube
-oc set volume dc/sonarqube --add --overwrite --name=sonarqube-volume-1 --mount-path=/opt/sonarqube/data/ --type persistentVolumeClaim --claim-name=sonarqube-pvc
-
-oc set resources dc/sonarqube --limits=memory=3Gi,cpu=2 --requests=memory=2Gi,cpu=1
-oc patch dc sonarqube --patch='{ "spec": { "strategy": { "type": "Recreate" }}}'
-
-oc set probe dc/sonarqube --liveness --failure-threshold 3 --initial-delay-seconds 40 -- echo ok
-oc set probe dc/sonarqube --readiness --failure-threshold 3 --initial-delay-seconds 20 --get-url=http://:9000/about
-
-oc rollout resume dc sonarqube
-
-echo "*********************************************************"
-echo "Completed Installation of Sonqr Qube!!"
-echo "*********************************************************"

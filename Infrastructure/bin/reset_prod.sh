@@ -17,7 +17,16 @@ echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to Gr
 # up the whole infrastructure to guarantee a Blue
 # rollout followed by a Green rollout.
 
-echo "Reset the applications to use green deployment"
-oc patch route mlbparks -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"mlbparks-green"}}}' || true
-oc patch route nationalparks -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"nationalparks-green"}}}' || true
-oc patch route parksmap -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"parksmap-green"}}}' || true
+# To be Implemented by Student
+# patch backend routes to green
+oc patch route/mlbparks \
+    -p '{"spec":{"to":{"name":"mlbparks-green"}}}' \
+    -n $GUID-parks-prod || echo "MLBParks already green"
+oc patch route/nationalparks \
+    -p '{"spec":{"to":{"name":"nationalparks-green"}}}' \
+    -n $GUID-parks-prod || echo "NationalParks already green"
+
+# switch parksmap frontend to green
+oc patch route/parksmap \
+    -p '{"spec":{"to":{"name":"parksmap-green"}}}' \
+    -n $GUID-parks-prod || echo "ParksMap already green"

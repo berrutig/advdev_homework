@@ -9,81 +9,175 @@ fi
 GUID=$1
 echo "Setting up Parks Production Environment in project ${GUID}-parks-prod"
 
-oc project ${GUID}-parks-prod
 # Code to set up the parks production project. It will need a StatefulSet MongoDB, and two applications each (Blue/Green) for NationalParks, MLBParks and Parksmap.
 # The Green services/routes need to be active initially to guarantee a successful grading pipeline run.
 
-oc policy add-role-to-group system:image-puller system:serviceaccounts:${GUID}-parks-prod -n ${GUID}-parks-dev
-oc policy add-role-to-user edit system:serviceaccount:${GUID}-jenkins:jenkins -n ${GUID}-parks-prod
-oc policy add-role-to-user edit system:serviceaccount:gpte-jenkins:jenkins -n ${GUID}-parks-prod
-
 # To be Implemented by Student
+oc policy add-role-to-user view --serviceaccount=default -n $GUID-parks-prod
+oc policy add-role-to-user edit system:serviceaccount:$GUID-jenkins:jenkins -n $GUID-parks-prod
+oc policy add-role-to-user admin system:serviceaccount:gpte-jenkins:jenkins -n $GUID-parks-prod
 
-git reset --hard HEAD && git pull origin master
-cd $HOME/advdev_homework/Infrastructure/templates
+MONGODB_DATABASE="mongodb"
+MONGODB_USERNAME="mongodb_user"
+MONGODB_PASSWORD="mongodb_password"
+MONGODB_SERVICE_NAME="mongodb"
+MONGODB_ADMIN_PASSWORD="mongodb_admin_password"
+MONGODB_VOLUME="4Gi"
 
-# Replicated MongoDB setup
-echo "Creating Headless Service"
-oc create -f prod-mongodb-headless-service.yml && \
+oc new-app -f ./Infrastructure/templates/mongo-stateful.template.yaml \
+    -n $GUID-parks-prod\
+    --param MONGODB_DATABASE=${MONGODB_DATABASE}\
+    --param MONGODB_USERNAME=${MONGODB_USERNAME}\
+    --param MONGODB_PASSWORD=${MONGODB_PASSWORD}\
+    --param MONGODB_ADMIN_PASSWORD=${MONGODB_ADMIN_PASSWORD}\
+    --param MONGODB_VOLUME=${MONGODB_VOLUME}\
+    --param MONGODB_SERVICE_NAME=${MONGODB_SERVICE_NAME}
 
-echo "Creating Regular MongoDB Service" && \
-oc create -f prod-mongodb-regular-service.yml && \
+# config map
+oc create configmap parks-mongodb-config \
+    --from-literal=DB_HOST=${MONGODB_SERVICE_NAME}\
+    --from-literal=DB_PORT=27017\
+    --from-literal=DB_USERNAME=${MONGODB_USERNAME}\
+    --from-literal=DB_PASSWORD=${MONGODB_PASSWORD}\
+    --from-literal=DB_NAME=${MONGODB_DATABASE}\
+    --from-literal=DB_REPLICASET=rs0 \
+    -n $GUID-parks-prod
 
-echo "Creating Stateful Set for MongoDB" && \
-oc create -f prod-mongodb-statefulset.yml && \
+# parksmap
+oc new-app $GUID-parks-prod/parksmap-green:0.0 --name=parksmap-green \
+    --allow-missing-imagestream-tags=true \
+    --allow-missing-images=true \
+    -l type=parksmap-frontend \
+    -e APPNAME="ParksMap (Green)"\
+    -n $GUID-parks-prod
+oc set triggers dc/parksmap-green --remove-all -n $GUID-parks-prod
+oc rollout cancel dc/parksmap-green -n $GUID-parks-prod
+oc set probe dc/parksmap-green --readiness \
+    --get-url=http://:8080/ws/appname/ --initial-delay-seconds=60 \
+    --failure-threshold 5 -n $GUID-parks-prod
+oc set probe dc/parksmap-green --liveness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=60 \
+    --failure-threshold 5 -n $GUID-parks-prod
 
-oc get pvc && \
-echo "StatefulSet MongoDB created Successfully"
+oc new-app $GUID-parks-prod/parksmap-blue:0.0 --name=parksmap-blue \
+    --allow-missing-imagestream-tags=true \
+    --allow-missing-images=true \
+    -l type=parksmap-frontend \
+    -e APPNAME="ParksMap (Blue)"\
+    -n $GUID-parks-prod
+oc set triggers dc/parksmap-blue --remove-all -n $GUID-parks-prod
+oc rollout cancel dc/parksmap-blue -n $GUID-parks-prod
+oc set probe dc/parksmap-blue --readiness \
+    --get-url=http://:8080/ws/appname/ --initial-delay-seconds=60 \
+    --failure-threshold 5 -n $GUID-parks-prod
+oc set probe dc/parksmap-blue --liveness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=60 \
+    --failure-threshold 5 -n $GUID-parks-prod
 
-oc create configmap prod-mongodb-blue-config-map --from-literal="prod-mongodb-connection.properties=Placeholder" -n ${GUID}-parks-prod \n
-oc create configmap prod-mongodb-green-config-map --from-literal="prod-mongodb-connection.properties=Placeholder" -n ${GUID}-parks-prod \n
+# oc create service clusterip parksmap-green --tcp=8080 -n $GUID-parks-prod
+# oc create service clusterip parksmap-blue --tcp=8080 -n $GUID-parks-prod
+oc expose dc/parksmap-green --port=8080 -l type=parksmap-frontend -n $GUID-parks-prod
+oc expose dc/parksmap-blue --port=8080 -l type=parksmap-frontend -n $GUID-parks-prod
+oc expose svc/parksmap-green --name=parksmap -n $GUID-parks-prod
 
-# Blue Application
-oc new-app ${GUID}-parks-dev/mlbparks:0.0 --name=mlbparks-blue -e APPNAME="MLB Parks (Blue)" --allow-missing-imagestream-tags=true
-oc new-app ${GUID}-parks-dev/nationalparks:0.0 --name=nationalparks-blue -e APPNAME="National Parks (Blue)" --allow-missing-imagestream-tags=true
-oc new-app ${GUID}-parks-dev/parksmap:0.0 --name=parksmap-blue -e APPNAME="ParksMap (Blue)" --allow-missing-imagestream-tags=true
+# nationalparks
+oc new-app $GUID-parks-prod/nationalparks-green:0.0 --name=nationalparks-green \
+    --allow-missing-imagestream-tags=true \
+    --allow-missing-images=true \
+    -l type=parksmap-backend \
+    -e APPNAME="National Parks (Green)" \
+    -e DB_HOST=$MONGODB_SERVICE_NAME \
+    -e DB_PORT=27017 \
+    -e DB_USERNAME=$MONGODB_USERNAME \
+    -e DB_PASSWORD=$MONGODB_PASSWORD \
+    -e DB_NAME=$MONGODB_DATABASE \
+    -n $GUID-parks-prod
+oc set triggers dc/nationalparks-green --remove-all -n $GUID-parks-prod
+oc rollout cancel dc/nationalparks-green -n $GUID-parks-prod
+oc set env dc/nationalparks-green --from configmap/parks-mongodb-config -n $GUID-parks-prod
+oc set probe dc/nationalparks-green --readiness \
+    --get-url=http://:8080/ws/info/ --initial-delay-seconds=30 \
+    --failure-threshold 3 -n $GUID-parks-prod
+oc set probe dc/nationalparks-green --liveness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 \
+    --failure-threshold 3 -n $GUID-parks-prod
 
-oc set triggers dc/mlbparks-blue --remove-all
-oc set triggers dc/nationalparks-blue --remove-all
-oc set triggers dc/parksmap-blue --remove-all
+oc new-app $GUID-parks-prod/nationalparks-blue:0.0 --name=nationalparks-blue \
+    --allow-missing-imagestream-tags=true \
+    --allow-missing-images=true \
+    -l type=parksmap-backend \
+    -e APPNAME="National Parks (Blue)" \
+    -e DB_HOST=$MONGODB_SERVICE_NAME \
+    -e DB_PORT=27017 \
+    -e DB_USERNAME=$MONGODB_USERNAME \
+    -e DB_PASSWORD=$MONGODB_PASSWORD \
+    -e DB_NAME=$MONGODB_DATABASE \
+    -n $GUID-parks-prod
+oc set triggers dc/nationalparks-blue --remove-all -n $GUID-parks-prod
+oc rollout cancel dc/nationalparks-blue -n $GUID-parks-prod
+oc set env dc/nationalparks-blue --from configmap/parks-mongodb-config -n $GUID-parks-prod
+oc set probe dc/nationalparks-blue --readiness \
+    --get-url=http://:8080/ws/info/ --initial-delay-seconds=30 \
+    --failure-threshold 3 -n $GUID-parks-prod
+oc set probe dc/nationalparks-blue --liveness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 \
+    --failure-threshold 3 -n $GUID-parks-prod
 
-oc expose dc/mlbparks-blue --port 8080
-oc expose dc/nationalparks-blue --port 8080
-oc expose dc/parksmap-blue --port 8080
+# oc create service clusterip nationalparks-green --tcp=8080 -n $GUID-parks-prod
+# oc create service clusterip nationalparks-blue --tcp=8080 -n $GUID-parks-prod
+oc expose dc/nationalparks-green --port=8080 -l type=parksmap-backend -n $GUID-parks-prod
+oc expose dc/nationalparks-blue --port=8080 -l type=parksmap-backend -n $GUID-parks-prod
+oc expose svc/nationalparks-green --name=nationalparks -n $GUID-parks-prod
 
-# oc create configmap mlbparks-blue-config --from-literal="application-db.properties=Placeholder"
-# oc create configmap nationalparks-blue-config --from-literal="application-db.properties=Placeholder"
-# oc create configmap parksmap-blue-config --from-literal="application-db.properties=Placeholder"
+# mlbparks
+oc new-app $GUID-parks-prod/mlbparks-green:0.0 --name=mlbparks-green \
+    --allow-missing-imagestream-tags=true \
+    --allow-missing-images=true \
+    -l type=parksmap-backend \
+    -e APPNAME="MLB Parks (Green)" \
+    -e DB_HOST=$MONGODB_SERVICE_NAME \
+    -e DB_PORT=27017 \
+    -e DB_USERNAME=$MONGODB_USERNAME \
+    -e DB_PASSWORD=$MONGODB_PASSWORD \
+    -e DB_NAME=$MONGODB_DATABASE \
+    -n $GUID-parks-prod
+oc set triggers dc/mlbparks-green --remove-all -n $GUID-parks-prod
+oc rollout cancel dc/mlbparks-green -n $GUID-parks-prod
+oc set env dc/mlbparks-green --from configmap/parks-mongodb-config -n $GUID-parks-prod
+oc set probe dc/mlbparks-green --readiness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n $GUID-parks-prod
+oc set probe dc/mlbparks-green --liveness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n $GUID-parks-prod
 
-# oc env dc/mlbparks-blue --from=configmap/mlbparks-blue-config
-# oc env dc/nationalparks-blue --from=configmap/nationalparks-blue-config
-# oc env dc/parksmap-blue --from=configmap/parksmap-blue-config
+oc new-app $GUID-parks-prod/mlbparks-blue:0.0 --name=mlbparks-blue \
+    --allow-missing-imagestream-tags=true \
+    --allow-missing-images=true \
+    -l type=parksmap-backend \
+    -e APPNAME="MLB Parks (Blue)" \
+    -e DB_HOST=$MONGODB_SERVICE_NAME \
+    -e DB_PORT=27017 \
+    -e DB_USERNAME=$MONGODB_USERNAME \
+    -e DB_PASSWORD=$MONGODB_PASSWORD \
+    -e DB_NAME=$MONGODB_DATABASE \
+    -n $GUID-parks-prod
+oc set triggers dc/mlbparks-blue --remove-all -n $GUID-parks-prod
+oc rollout cancel dc/mlbparks-blue -n $GUID-parks-prod
+oc set env dc/mlbparks-blue --from configmap/parks-mongodb-config -n $GUID-parks-prod
+oc set probe dc/mlbparks-blue --readiness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n $GUID-parks-prod
+oc set probe dc/mlbparks-blue --liveness \
+    --get-url=http://:8080/ws/healthz/ --initial-delay-seconds=30 -n $GUID-parks-prod
 
-oc env dc/mlbparks-blue --from=configmap/prod-mongodb-blue-config-map
-oc env dc/nationalparks-blue --from=configmap/prod-mongodb-blue-config-map
-oc env dc/parksmap-blue --from=configmap/prod-mongodb-blue-config-map
+# oc create service clusterip mlbparks-green --tcp=8080 -n $GUID-parks-prod
+# oc create service clusterip mlbparks-blue --tcp=8080 -n $GUID-parks-prod
+oc expose dc/mlbparks-green --port=8080 -l type=parksmap-backend -n $GUID-parks-prod
+oc expose dc/mlbparks-blue --port=8080 -l type=parksmap-backend -n $GUID-parks-prod
+oc expose svc/mlbparks-green --name=mlbparks -n $GUID-parks-prod
 
-oc expose svc/mlbparks-blue --name mlbparks -n ${GUID}-parks-prod
-oc expose svc/nationalparks-blue --name nationalparks -n ${GUID}-parks-prod
-oc expose svc/parksmap-blue --name parksmap -n ${GUID}-parks-prod
-
-# Green Application
-oc new-app ${GUID}-parks-dev/mlbparks:0.0 --name=mlbparks-green -e APPNAME="MLB Parks (Green)" --allow-missing-imagestream-tags=true
-oc new-app ${GUID}-parks-dev/nationalparks:0.0 --name=nationalparks-green -e APPNAME="National Parks (Green)" --allow-missing-imagestream-tags=true
-oc new-app ${GUID}-parks-dev/parksmap:0.0 --name=parksmap-green -e APPNAME="ParksMap (Green)" --allow-missing-imagestream-tags=true
-
-oc set triggers dc/mlbparks-green --remove-all
-oc set triggers dc/nationalparks-green --remove-all
-oc set triggers dc/parksmap-green --remove-all
-
-oc expose dc/mlbparks-green --port 8080
-oc expose dc/nationalparks-green --port 8080
-oc expose dc/parksmap-green --port 8080
-
-# oc create configmap mlbparks-green-config --from-literal="application-db.properties=Placeholder"
-# oc create configmap nationalparks-green-config --from-literal="application-db.properties=Placeholder"
-# oc create configmap parksmap-green-config --from-literal="application-db.properties=Placeholder"
-
-# oc env dc/mlbparks-green --from=configmap/mlbparks-green-config
-# oc env dc/nationalparks-green --from=configmap/nationalparks-green-config
-# oc env dc/parksmap-green --from=configmap/parksmap-green-config
+# set resource limits
+oc set resources dc/parksmap-blue --limits=memory=1Gi --requests=memory=0.5Gi -n $GUID-parks-prod
+oc set resources dc/parksmap-green --limits=memory=1Gi --requests=memory=0.5Gi -n $GUID-parks-prod
+oc set resources dc/mlbparks-blue --limits=memory=1Gi --requests=memory=0.5Gi -n $GUID-parks-prod
+oc set resources dc/mlbparks-green --limits=memory=1Gi --requests=memory=0.5Gi -n $GUID-parks-prod
+oc set resources dc/nationalparks-green --limits=memory=1Gi --requests=memory=0.5Gi -n $GUID-parks-prod
+oc set resources dc/nationalparks-blue --limits=memory=1Gi --requests=memory=0.5Gi -n $GUID-parks-prod
