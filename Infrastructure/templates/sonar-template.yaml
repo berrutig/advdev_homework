@@ -4,8 +4,7 @@ metadata:
   annotations:
     description: The SonarQube OpenShift template
     tags: instant-app,sonarqube
-  name: sonarqube
-message: "Login to SonarQube with the default admin user: admin/admin"
+  name: sonarqube-template
 objects:
 - apiVersion: v1
   kind: Service
@@ -49,8 +48,8 @@ objects:
         tags: sonarqube
       from:
         kind: DockerImage
-        name: ${SONARQUBE_IMAGE}:${SONARQUBE_VERSION}
-#        name: sonarqube:${SONARQUBE_VERSION}
+        name: docker.io/wkulhanek/sonarqube:${SONARQUBE_VERSION}
+        namespace: ${GUID}-sonarqube
       importPolicy: {}
       name: ${SONARQUBE_VERSION}
 - apiVersion: v1
@@ -67,13 +66,9 @@ objects:
       deploymentconfig: sonarqube
     strategy:
       resources: {}
-      rollingParams:
-        intervalSeconds: 1
-        maxSurge: 25%
-        maxUnavailable: 25%
+      recreateParams:
         timeoutSeconds: 600
-        updatePeriodSeconds: 1
-      type: Rolling
+      type: Recreate
     template:
       metadata:
         annotations:
@@ -117,10 +112,10 @@ objects:
             timeoutSeconds: 5
           resources:
             requests:
-              cpu: 250m
-              memory: 1Gi
+              cpu: 100m
+              memory: 1.5Gi
             limits:
-              cpu: 1500m
+              cpu: 500m
               memory: 3Gi
           terminationMessagePath: /dev/termination-log
           volumeMounts:
@@ -220,7 +215,7 @@ objects:
             timeoutSeconds: 1
           resources:
             limits:
-              memory: 256Mi
+              memory: 512Mi
           securityContext:
             capabilities: {}
             privileged: false
@@ -244,7 +239,7 @@ objects:
         - postgresql
         from:
           kind: ImageStreamTag
-          name: postgresql:9.4
+          name: postgresql:9.6
           namespace: openshift
       type: ImageChange
     - type: ConfigChange
@@ -269,12 +264,8 @@ objects:
       requests:
         storage: ${SONAR_VOLUME_CAPACITY}
 parameters:
-- displayName: SonarQube image
-  value: "openshiftdemos/sonarqube"
-  name: SONARQUBE_IMAGE
-  required: true
 - displayName: SonarQube version
-  value: "6.7"
+  value: "6.7.4"
   name: SONARQUBE_VERSION
   required: true
 - description: Password for SonarQube Server PostgreSQL backend
@@ -287,9 +278,14 @@ parameters:
   displayName: PostgreSQL Volume Capacity
   name: POSTGRESQL_VOLUME_CAPACITY
   required: true
-  value: 1Gi
+  value: 4Gi
 - description: Volume space available for SonarQube
   displayName: SonarQube Volume Capacity
   name: SONAR_VOLUME_CAPACITY
   required: true
-value: 1Gi
+  value: 4Gi
+- name: GUID
+  displayName: GUID
+  description: guid
+  value: ddibarto
+required: true
