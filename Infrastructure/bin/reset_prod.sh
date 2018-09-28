@@ -17,20 +17,7 @@ echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to Gr
 # up the whole infrastructure to guarantee a Blue
 # rollout followed by a Green rollout.
 
-# To be Implemented by Student
-function ocn {
-    oc -n $GUID-parks-prod $@
-}
-
-function reset_app {
-    if [ $1 != parksmap ]
-    then
-        ocn label svc $1-blue type-
-        ocn label svc $1-green type=parksmap-backend --overwrite
-    fi
-    ocn set route-backends $1 $1-green=1 $1-blue=0
-}
-
-reset_app mlbparks
-reset_app nationalparks
-reset_app parksmap
+echo "Reset the applications to use green deployment"
+oc patch route mlbparks -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"mlbparks-green"}}}' || true
+oc patch route nationalparks -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"nationalparks-green"}}}' || true
+oc patch route parksmap -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"parksmap-green"}}}' || true
