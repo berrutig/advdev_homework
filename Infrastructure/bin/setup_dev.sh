@@ -15,7 +15,7 @@ oc project ${GUID}-parks-dev && \
 oc policy add-role-to-user edit system:serviceaccount:${GUID}-jenkins:jenkins -n ${GUID}-parks-dev && \
 oc policy add-role-to-user edit system:serviceaccount:gpte-jenkins:jenkins -n ${GUID}-parks-dev
 
-cd $HOME/AnanthRHAdvDevHomework/Infrastructure/templates
+cd $HOME/advdev_homework/Infrastructure/templates
 oc create -f dev-mongodb-configmaps.yml && \
 
 oc new-app --name=mongodb -e MONGODB_USER=mongodb -e MONGODB_PASSWORD=mongodb -e MONGODB_DATABASE=parks -e MONGODB_ADMIN_PASSWORD=mongodb_admin_password     registry.access.redhat.com/rhscl/mongodb-26-rhel7
