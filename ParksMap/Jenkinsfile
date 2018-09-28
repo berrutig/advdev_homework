@@ -27,7 +27,7 @@ podTemplate(
 
     // Checkout Source Code
     stage('Checkout Source') {
-      git url: "https://gitlab.com/frankzhao/advdev_homework_template.git"
+      git url: "https://github.com/dulecux/advdev_homework.git"
     }
 
     // The following variables need to be defined at the top level
