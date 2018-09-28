@@ -5,7 +5,7 @@ metadata:
 spec:
   source:
     git:
-      uri: "https://gitlab.com/frankzhao/advdev_homework_template.git"
+      uri: "oc export all --as-template=[template-name].git"
   strategy:
     jenkinsPipelineStrategy:
       jenkinsfilePath: ParksMap/Jenkinsfile
