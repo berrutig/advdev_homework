@@ -20,7 +20,7 @@ oc policy add-role-to-user edit system:serviceaccount:gpte-jenkins:jenkins -n ${
 # To be Implemented by Student
 
 git reset --hard HEAD && git pull origin master
-cd $HOME/AnanthRHAdvDevHomework/Infrastructure/templates
+cd $HOME/advdev_homework/Infrastructure/templates
 
 # Replicated MongoDB setup
 echo "Creating Headless Service"
