@@ -44,8 +44,8 @@ oc set probe dc jenkins --readiness --initial-delay-seconds=500
 # Backup existing registries.conf to /etc/containers/registries.conf.yyyyMMddHHMM
 echo "Backup existing registries.conf to /etc/containers/registries.conf.yyyyMMddHHMM"
 sudo cp /etc/containers/registries.conf /etc/containers/registries.conf.$(date +%Y%m%d%H%M)
-sudo cd /home/${USER}/AnanthRHAdvDevHomework/Infrastructure/bin
-sudo command cp -fr /home/${USER}/AnanthRHAdvDevHomework/Infrastructure/bin/registries.conf /etc/containers
+sudo cd /home/${USER}/advdev_homework/Infrastructure/bin
+sudo command cp -fr /home/${USER}/advdev_homework/Infrastructure/bin/registries.conf /etc/containers
 
 sudo systemctl enable docker
 sudo systemctl start docker
