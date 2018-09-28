@@ -189,6 +189,10 @@ objects:
             value: sonar
           image: ' '
           imagePullPolicy: IfNotPresent
+          name: postgresql
+          ports:
+          - containerPort: 5432
+            protocol: TCP
           resources:
             limits:
               memory: 512Mi
