@@ -28,10 +28,10 @@ echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cl
 
 # To be Implemented by Student
 
-oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=2Gi --param VOLUME_CAPACITY=4Gi -n ${GUID}-jenkins
+oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=4Gi --param VOLUME_CAPACITY=8Gi -n ${GUID}-jenkins
 # Alter resources assigned to pod
 oc rollout pause dc jenkins -n ${GUID}-jenkins
-oc set resources dc jenkins --requests=memory=2Gi,cpu=1 --limits=memory=3Gi,cpu=1 -n ${GUID}-jenkins
+oc set resources dc jenkins --requests=memory=2Gi,cpu=1 --limits=memory=6Gi,cpu=1 -n ${GUID}-jenkins
 oc rollout resume dc jenkins -n ${GUID}-jenkins
 
 # Push Jenkins slave maven image with skopeo support
