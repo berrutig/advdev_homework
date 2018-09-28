@@ -125,8 +125,8 @@ parameters:
 - name: VOLUME_CAPACITY
   displayName: VOLUME_CAPACITY
   description: volume capacity
-  value: "1Gi"
+  value: "2Gi"
 - name: MEMORY_LIMIT
   displayName: MEMORY_LIMIT
   description: memory limit
-  value: "512Mi"
+  value: "1Gi"
