@@ -33,7 +33,7 @@ oc new-app -f ./Infrastructure/templates/mongodb-statefulset-template.yaml \
 --param MONGODB_DATABASE=${DB_NAME} \
 --param MONGODB_REPLICA_NAME=${DB_REPLICASET} \
 --param MONGODB_KEYFILE_VALUE=${DB_KEYFILE_VALUE} \
---param VOLUME_CAPACITY=1Gi \
+--param VOLUME_CAPACITY=2Gi \
 --param MEMORY_LIMIT=1Gi \
 -n ${GUID}-parks-prod
 
