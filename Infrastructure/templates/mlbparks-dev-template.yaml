@@ -70,6 +70,26 @@ objects:
         - image: ' '
           imagePullPolicy: IfNotPresent
           name: mlbparks
+          livenessProbe:
+            exec:
+              command:
+              - echo
+              - ok
+            failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ws/healthz/
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
           resources:
             limits:
               cpu: 500m
@@ -207,4 +227,4 @@ parameters:
   displayName: DB_NAME
   description: db name
   value: parks
-  required: true
+required: true
