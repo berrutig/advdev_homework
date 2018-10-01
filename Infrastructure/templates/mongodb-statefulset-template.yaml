@@ -75,11 +75,6 @@ objects:
           resources:
             limits:
               memory: "${MEMORY_LIMIT}"
-          readinessProbe:
-              exec:
-                command:
-                  - stat
-                  - /tmp/initialized
     volumeClaimTemplates:
       - metadata:
           name: mongo-data
