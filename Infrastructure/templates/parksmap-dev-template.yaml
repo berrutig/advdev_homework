@@ -44,7 +44,7 @@ objects:
         intervalSeconds: 1
         maxSurge: 25%
         maxUnavailable: 25%
-        timeoutSeconds: 1000
+        timeoutSeconds: 600
         updatePeriodSeconds: 1
       type: Rolling
     template:
@@ -66,7 +66,7 @@ objects:
             initialDelaySeconds: 120
             periodSeconds: 10
             successThreshold: 1
-            timeoutSeconds: 5
+            timeoutSeconds: 1
           readinessProbe:
             failureThreshold: 3
             httpGet:
@@ -76,7 +76,7 @@ objects:
             initialDelaySeconds: 120
             periodSeconds: 10
             successThreshold: 1
-            timeoutSeconds: 5
+            timeoutSeconds: 1
           resources:
             limits:
               cpu: 500m
@@ -162,5 +162,5 @@ parameters:
 - name: GUID
   displayName: GUID
   description: guid
-  value: 89a4
+  value: ddibarto
   required: true
