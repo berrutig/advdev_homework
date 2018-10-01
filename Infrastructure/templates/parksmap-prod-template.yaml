@@ -95,7 +95,7 @@ objects:
         intervalSeconds: 1
         maxSurge: 25%
         maxUnavailable: 25%
-        timeoutSeconds: 600
+        timeoutSeconds: 1000
         updatePeriodSeconds: 1
       type: Rolling
     template:
@@ -114,6 +114,16 @@ objects:
               - echo
               - ok
             failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ws/healthz/
+              port: 8080
+              scheme: HTTP
             initialDelaySeconds: 120
             periodSeconds: 10
             successThreshold: 1
