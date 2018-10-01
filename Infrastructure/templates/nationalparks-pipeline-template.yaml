@@ -25,12 +25,12 @@ parameters:
 - name: REPO
   displayName: REPO
   description: repo
-  value: https://github.com/ddibartolomei/ocp_advdev_homework
+  value: https://github.com/dulecux/advdev_homework
   required: true
 - name: GUID
   displayName: GUID
   description: guid
-  value: ddibarto
+  value: 89a4
   required: true
 - name: CLUSTER
   displayName: CLUSTER
