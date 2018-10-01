@@ -201,7 +201,7 @@ parameters:
 - name: GUID
   displayName: GUID
   description: guid
-  value: 89a4
+  value: ddibarto
   required: true
 - name: DB_HOST
   displayName: DB_HOST
@@ -227,4 +227,4 @@ parameters:
   displayName: DB_NAME
   description: db name
   value: parks
-required: true
+  required: true
