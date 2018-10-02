@@ -19,7 +19,7 @@ objects:
     source:
       git:
         ref: master
-        uri: https://github.com/SammZhu/advdev_homework
+        uri: https://github.com/dulecux/advdev_homework
       type: Git
     strategy:
       jenkinsPipelineStrategy:
@@ -42,7 +42,7 @@ objects:
     source:
       git:
         ref: master
-        uri: https://github.com/SammZhu/advdev_homework
+        uri: https://github.com/dulecux/advdev_homework
       type: Git
     strategy:
       jenkinsPipelineStrategy:
@@ -65,7 +65,7 @@ objects:
     source:
       git:
         ref: master
-        uri: https://github.com/SammZhu/advdev_homework
+        uri: https://github.com/dulecux/advdev_homework
       type: Git
     strategy:
       jenkinsPipelineStrategy:
