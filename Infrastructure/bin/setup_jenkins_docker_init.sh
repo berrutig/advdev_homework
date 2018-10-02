@@ -7,7 +7,7 @@ echo "Jenkins docker script... using ${GUID}, ${USER} and token: ${SESSION_TOKEN
 # Backup existing registries.conf to /etc/containers/registries.conf.yyyyMMddHHMM
 echo "Backup existing registries.conf to /etc/containers/registries.conf.yyyyMMddHHMM"
 cp /etc/containers/registries.conf /etc/containers/registries.conf.$(date +%Y%m%d%H%M)
-cd /home/$2/AnanthRHAdvDevHomework/Infrastructure/bin
+cd /home/$2/advdev_homework/Infrastructure/bin
 command cp -fr registries.conf /etc/containers/
 
 echo "Enabling Docker and Starting Docker service"
