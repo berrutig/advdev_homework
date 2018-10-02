@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sjl-parks-dev
+  name: 89a4-parks-dev
 objects:
 - apiVersion: v1
   kind: ServiceAccount
@@ -26,4 +26,4 @@ objects:
   - kind: ServiceAccount
     name: jenkins
   userNames:
-  - system:serviceaccount:sjl-jenkins:jenkins
+  - system:serviceaccount:89a4-jenkins:jenkins
