@@ -29,4 +29,4 @@ echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cl
 # To be Implemented by Student
 
 oc new-app -f ./Infrastructure/templates/${GUID}-jenkins.yaml -p GUID=${GUID} -p CLUSTER=${CLUSTER} -p REPO=${REPO} -n ${GUID}-jenkins
-oc start-build bc/jenkins-slave-maven-appdev -n sjl-jenkins
+oc start-build bc/jenkins-slave-maven-appdev -n 89a4-jenkins
