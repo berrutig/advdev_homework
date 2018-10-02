@@ -132,7 +132,7 @@ objects:
     - annotations: null
       from:
         kind: DockerImage
-        name: docker-registry.default.svc:5000/sjl-jenkins/jenkins-slave-maven-appdev:v3.9
+        name: docker-registry.default.svc:5000/89a4-jenkins/jenkins-slave-maven-appdev:v3.9
       generation: null
       importPolicy: {}
       name: v3.9
@@ -154,7 +154,7 @@ objects:
       template: jenkins-persistent-template
     name: jenkins
   spec:
-    host: jenkins-sjl-jenkins.apps.na39.openshift.opentlc.com
+    host: jenkins-89a4-jenkins.apps.na39.openshift.opentlc.com
     tls:
       insecureEdgeTerminationPolicy: Redirect
       termination: edge
@@ -169,7 +169,7 @@ objects:
       - lastTransitionTime: 2018-09-12T19:43:02Z
         status: "True"
         type: Admitted
-      host: jenkins-sjl-jenkins.apps.na39.openshift.opentlc.com
+      host: jenkins-89a4-jenkins.apps.na39.openshift.opentlc.com
       routerName: router
       wildcardPolicy: None
 - apiVersion: v1
@@ -194,7 +194,7 @@ objects:
   - kind: ServiceAccount
     name: jenkins
   userNames:
-  - system:serviceaccount:sjl-jenkins:jenkins
+  - system:serviceaccount:89a4-jenkins:jenkins
 - apiVersion: v1
   kind: Service
   metadata:
@@ -269,7 +269,7 @@ objects:
     source:
       git:
        ref: "master"
-       uri: "https://github.com/slibonati/advdev_homework_template"
+       uri: "https://github.com/dulecux/advdev_homework"
     output: 
       to:
         kind: "ImageStreamTag"
