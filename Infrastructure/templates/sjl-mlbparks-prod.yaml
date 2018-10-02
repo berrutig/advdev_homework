@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sjl-mlbparks-prod
+  name: 89a4-mlbparks-prod
 objects:
 - apiVersion: v1
   kind: DeploymentConfig
@@ -48,7 +48,7 @@ objects:
           - envFrom:
               - configMapRef:
                    name: sjl-mlbparks-blue-config
-            image: docker-registry.default.svc:5000/sjl-parks-prod/mlbparks:1.1-1
+            image: docker-registry.default.svc:5000/89a4-parks-prod/mlbparks:1.1-1
             imagePullPolicy: IfNotPresent
             livenessProbe:
               failureThreshold: 3
@@ -124,8 +124,8 @@ objects:
         containers:
           - envFrom:
               - configMapRef:
-                   name: sjl-mlbparks-green-config
-            image: docker-registry.default.svc:5000/sjl-parks-prod/mlbparks:1.1-1
+                   name: 89a4-mlbparks-green-config
+            image: docker-registry.default.svc:5000/89a4-parks-prod/mlbparks:1.1-1
             imagePullPolicy: IfNotPresent
             livenessProbe:
               failureThreshold: 3
@@ -168,7 +168,7 @@ objects:
       app: mlbparks
     name: mlbparks
   spec:
-    host: mlbparks-sjl-parks-prod.apps.na39.openshift.opentlc.com
+    host: mlbparks-89a4-parks-prod.apps.na39.openshift.opentlc.com
     port:
       targetPort: 8080
     to:
@@ -247,5 +247,5 @@ objects:
     APPNAME: MLB Parks (Green)
   kind: ConfigMap
   metadata:
-    name: sjl-mlbparks-green-config
-    namespace: sjl-parks-prod
+    name: 89a4-mlbparks-green-config
+    namespace: 89a4-parks-prod
