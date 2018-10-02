@@ -16,17 +16,17 @@ echo "Setting up Parks Production Environment in project ${GUID}-parks-prod"
 
 
 # Jenkins Service Account
-oc new-app -f ./Infrastructure/templates/sjl-jenkins-sa.yaml -n sjl-parks-prod
+oc new-app -f ./Infrastructure/templates/sjl-jenkins-sa.yaml -n 89a4-parks-prod
 
 # Grant the correct permissions to pull images from the development project
 # in yaml, but unreliable
-oc policy add-role-to-group system:image-puller system:serviceaccounts:sjl-parks-prod -n sjl-parks-dev
+oc policy add-role-to-group system:image-puller system:serviceaccounts:89a4-parks-prod -n 89a4-parks-dev
 
 # StatefulSet
-oc new-app -f ./Infrastructure/templates/sjl-parks-prod.yaml -n sjl-parks-prod
+oc new-app -f ./Infrastructure/templates/sjl-parks-prod.yaml -n 89a4-parks-prod
 # Microservices
-oc new-app -f ./Infrastructure/templates/sjl-mlbparks-prod.yaml -n sjl-parks-prod
-oc new-app -f ./Infrastructure/templates/sjl-nationalparks-prod.yaml -n sjl-parks-prod
-oc new-app -f ./Infrastructure/templates/sjl-parksmap-prod.yaml -n sjl-parks-prod
+oc new-app -f ./Infrastructure/templates/sjl-mlbparks-prod.yaml -n 89a4-parks-prod
+oc new-app -f ./Infrastructure/templates/sjl-nationalparks-prod.yaml -n 89a4-parks-prod
+oc new-app -f ./Infrastructure/templates/sjl-parksmap-prod.yaml -n 89a4-parks-prod
 
 
