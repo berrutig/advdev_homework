@@ -6,7 +6,7 @@ podTemplate(
   containers: [
     containerTemplate(
       name: "jnlp",
-      image: "docker-registry.default.svc:5000/${GUID}-jenkins/maven-slave-pod",
+      image: "docker-registry.default.svc:5000/${GUID}-jenkins/jenkins-slave-appdev",
       resourceRequestMemory: "1Gi",
       resourceLimitMemory: "2Gi"
     )
@@ -20,155 +20,145 @@ podTemplate(
     // You need to build the application in directory `MLBParks`.
     // Also copy "../nexus_settings.xml" to your build directory
     // and replace 'GUID' in the file with your ${GUID} to point to >your< Nexus instance
-    // Define Maven command
     def mvnCmd = "mvn -s ./nexus_settings.xml"
 
     // Checkout Source Code
-    stage('Checkout source code') {
-      echo "Checking out Source Code"
-      git url: 'https://github.com/dulecux/advdev_homework'
-    }    
-
-     // Extract version and other properties from the pom.xml
-    def groupId = getGroupIdFromPom("./MLBParks/pom.xml")
-    def artifactId = getArtifactIdFromPom("./MLBParks/pom.xml")
-    def version = getVersionFromPom("./MLBParks/pom.xml")
-
-    // Set the tag for the development image: version + build number
-    def devTag = "${version}-${BUILD_NUMBER}"
-    // Set the tag for the production image: version
-    def prodTag = "${version}"
-
-    // Use Maven to build the war file
-    stage('Build Java war') {
-      echo "Building version ${devTag}"
-      sh "${mvnCmd} -f ./MLBParks/pom.xml clean package -DskipTests"
+    stage('Checkout Source') {
+      git 'https://github.com/misanche/ocpadvdev.git'
     }
 
-    // Use Maven run the unit tests
-    stage('Run Unit Tests') {
-      echo "Running Unit Tests"
-      sh "${mvnCmd} -f ./MLBParks/pom.xml test"
-    }
+    echo "Copy nexus_settings.xml to current directoy"
+    sh "cp ./nexus_settings.xml MLBParks/nexus_settings.xml"
+    echo "Replace GUID string with current ${GUID}"
+    sh "sed -i -- 's/GUID/${GUID}/g' MLBParks/nexus_settings.xml"
 
-    // Use Maven call SonarQube for Code Analysis
-    stage('Inspect Code Quality') {
-      echo "Running Code Analysis"
-      sh "${mvnCmd} -f ./MLBParks/pom.xml sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.na39.openshift.opentlc.com -Dsonar.projectName=${JOB_BASE_NAME}-${devTag}"
-    } 
+    echo "Change Folder to > MLBParks"
+    dir ('MLBParks') {
+      // Set the tag for the development image: version + build number
+      def version = getVersionFromPom("pom.xml")
+      def app = getArtifactIdFromPom("pom.xml")
+      def devTag  = "${version}-${BUILD_NUMBER}"
+      // Set the tag for the production image: version
+      def prodTag = "${version}"
+      def devNamespace = "${GUID}-parks-dev"
+      def prodNamespace = "${GUID}-parks-prod"
 
-    // Publish the built war file to Nexus
-    stage('Publish Nexus Artifact') {
-      echo "Publish to Nexus"
-      sh "${mvnCmd} -f ./MLBParks/pom.xml deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3-${GUID}-nexus.apps.na39.openshift.opentlc.com/repository/releases"
-    }
+      // Using Maven build the war file
+      // Do not run tests in this step
+      stage('Build war') {
+        echo "Building version ${devTag}"
+        sh "${mvnCmd} clean package -DskipTests"
+      }
+      // Using Maven run the unit tests
+      stage('Unit Tests') {
+        echo "Running Unit Tests"
 
-    // Build the OpenShift Image in OpenShift
-    stage('Build and Tag OpenShift Image') {
-    echo "Building OpenShift container image tasks:${devTag}"
-    // Start Binary Build in OpenShift using the file we just published
-    sh "oc start-build mlbparks --follow --from-file=http://nexus3-${GUID}-nexus.apps.na39.openshift.opentlc.com/repository/releases/com/openshift/evg/roadshow/mlbparks/${version}/mlbparks-${version}.war -n ${GUID}-parks-dev"
+        sh "${mvnCmd} test"
+      }
 
-    // Tag the image using the devTag
-    openshiftTag alias: 'false', destStream: 'mlbparks', destTag: devTag, destinationNamespace: "${GUID}-parks-dev", namespace: "${GUID}-parks-dev", srcStream: 'mlbparks', srcTag: 'latest', verbose: 'false'
-    }
+      stage('Code Analysis') {
+        echo "Running Code Analysis"
 
-    // Deploy the built image to the Development Environment
-    stage('Verify deploy in Dev') {
-    echo "Deploying container image to Development Project"
+        // Replace xyz-sonarqube with the name of your Sonarqube project
+        sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.na39.openshift.opentlc.com/ -Dsonar.projectName=${app}-${devTag}"
+      }
 
-    // Update the Image on the Development Deployment Config
-    sh "oc set image dc/mlbparks mlbparks=docker-registry.default.svc:5000/${GUID}-parks-dev/mlbparks:${devTag} -n ${GUID}-parks-dev"
+      stage('Publish to Nexus') {
+        echo "Publish to Nexus"
 
-    // Update the Config Map which contains the config for the mlbparks application
-    sh "oc delete configmap mlbparks-config -n ${GUID}-parks-dev --ignore-not-found=true"
+        // Replace xyz-nexus with the name of your Nexus project
+        sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::http://nexus3-${GUID}-nexus.apps.na39.openshift.opentlc.com/repository/releases"
+      }
 
-    sh "oc create configmap mlbparks-config \
-                  --from-literal=APPNAME='MLB Parks (Dev)' \
-      --from-literal=DB_HOST=mongodb-34-rhel7.${GUID}-parks-dev.svc \
-                  --from-literal=DB_NAME=mongodb \
-                  --from-literal=DB_PASSWORD=mongodb \
-                  --from-literal=DB_PORT=27017 \
-                  --from-literal=DB_USERNAME=mongodb \
-                  -n ${GUID}-parks-dev"
+      // Build the OpenShift Image in OpenShift and tag it.
+      stage('Build and Tag OpenShift Image') {
+        echo "Building OpenShift container image mlbparks:${devTag}"
 
-    sh "oc set env dc/mlbparks --from=configmap/mlbparks-config -n ${GUID}-parks-dev" 
+        // Start Binary Build in OpenShift using the file we just published
+        // The filename is openshift-tasks.war in the 'target' directory of your current
+        // Jenkins workspace
+        // Replace xyz-tasks-dev with the name of your dev project
+        sh "oc start-build mlbparks --follow --from-file=./target/mlbparks.war -n ${devNamespace}"
 
-    // Deploy the development application
-    openshiftDeploy depCfg: 'mlbparks', namespace: "${GUID}-parks-dev", verbose: 'false', waitTime: '', waitUnit: 'sec'
-    openshiftVerifyDeployment depCfg: 'mlbparks', namespace: "${GUID}-parks-dev", replicaCount: '1', verbose: 'false', verifyReplicaCount: 'false', waitTime: '', waitUnit: 'sec'
-    openshiftVerifyService namespace: "${GUID}-parks-dev", svcName: 'mlbparks', verbose: 'false'
-    }
+        // OR use the file you just published into Nexus:
+        // sh "oc start-build tasks --follow --from-file=http://nexus3.${GUID}-nexus.svc.cluster.local:8081/repository/releases/org/jboss/quickstarts/eap/mlbparks/${version}/mlbparks-${version}.war -n ${devNamespace}"
 
-    // Run Integration Tests in the Development Environment
-    stage('Run Integration Tests') {
-    echo "Running Integration Tests"
+        // Tag the image using the devTag
+        openshiftTag alias: 'false', destStream: 'mlbparks', destTag: devTag, destinationNamespace: devNamespace, namespace: devNamespace, srcStream: 'mlbparks', srcTag: 'latest', verbose: 'false'
+      }
 
-    // Waiting for Application
-    sleep 30
-    // Curl status of application with /wz/health/ URL
-    sh "curl http://mlbparks-${GUID}-parks-dev.apps.na39.openshift.opentlc.com/ws/healthz/ | grep -q 'OK'"
-    // Curl endpoint to load data from application into backend database
-    sh "curl http://mlbparks-${GUID}-parks-dev.apps.na39.openshift.opentlc.com/ws/data/load/ | grep -q 'Items inserted in database: 30'"
-    }
+      // Deploy the built image to the Development Environment.
+      stage('Deploy to Dev') {
+        echo "Deploying container image to Development Project"
 
-    // Copy Image to Nexus Docker Registry
-    stage('Copy Image to Nexus Docker Registry') {
-    echo "Copy image to Nexus Docker Registry"
-    sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${GUID}-parks-dev/mlbparks:${devTag} docker://nexus-registry-${GUID}-nexus.apps.${CLUSTER}/mlbparks:${devTag}"
+        // Update the Image on the Development Deployment Config
+        sh "oc set image dc/mlbparks mlbparks=docker-registry.default.svc:5000/${GUID}-parks-dev/mlbparks:${devTag} -n ${GUID}-parks-dev"
 
-    // Tag the built image with the production tag
-    openshiftTag alias: 'false', destStream: 'mlbparks', destTag: prodTag, destinationNamespace: "${GUID}-parks-dev", namespace: "${GUID}-parks-dev", srcStream: 'mlbparks', srcTag: devTag, verbose: 'false'
-    }
+        // Deploy the development application.
+        // Replace xyz-tasks-dev with the name of your production project
+        openshiftDeploy depCfg: 'mlbparks', namespace: devNamespace, verbose: 'false', waitTime: '', waitUnit: 'sec'
+        openshiftVerifyDeployment depCfg: 'mlbparks', namespace: devNamespace, replicaCount: '1', verbose: 'false', verifyReplicaCount: 'false', waitTime: '', waitUnit: 'sec'
+        openshiftVerifyService namespace: devNamespace, svcName: 'mlbparks', verbose: 'false'
+      }
 
-    // Blue/Green Deployment into Production
-    def destApp   = "mlbparks-green"
-    def destcfgMap = "Green"
-    def activeApp = ""
+      // Run Integration Tests in the Development Environment.
+      stage('Integration Tests') {
+        echo "Running Integration Tests"
+        sleep 15
 
-    stage('Blue/Green Production Deployment') {
-    // Deploy the idle application alongside the active application 
-    activeApp = sh(returnStdout: true, script: "oc get route mlbparks -n ${GUID}-parks-prod -o jsonpath='{ .spec.to.name }'").trim()
-    if (activeApp == "mlbparks-green") {
-      destApp = "mlbparks-blue"
-      destcfgMap = "Blue"
-    }
-    echo "Active Application:      " + activeApp
-    echo "Destination Application: " + destApp
-    echo "Config Map to be used:   " + destcfgMap
+        echo "Getting ws health"
+        sh "curl -i -H 'Content-Length: 0' -X POST http://mlbparks-${GUID}-parks-dev.apps.na39.openshift.opentlc.com"
+      }
 
-    // Update the Image on the Production Deployment Config
-    sh "oc set image dc/${destApp} ${destApp}=docker-registry.default.svc:5000/${GUID}-parks-dev/mlbparks:${prodTag} -n ${GUID}-parks-prod"
+      // Copy Image to Nexus Docker Registry
+      stage('Copy Image to Nexus Docker Registry') {
+        echo "Copy image to Nexus Docker Registry"
 
-    // Update the Config Map 
-    sh "oc delete configmap mlbparks-config -n ${GUID}-parks-prod --ignore-not-found=true"
-    sh "oc create configmap mlbparks-config \
-                  --from-literal=APPNAME='MLB Parks (${destcfgMap})' \
-      --from-literal=DB_HOST=mongodb \
-                  --from-literal=DB_NAME=mongodb \
-                  --from-literal=DB_PASSWORD=mongodb \
-                  --from-literal=DB_PORT=27017 \
-                  --from-literal=DB_USERNAME=mongodb \
-                  --from-literal=DB_REPLICASET=rs0 \
-                  -n ${GUID}-parks-prod"
+        sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${GUID}-parks-dev/mlbparks:${devTag} docker://nexus-registry.${GUID}-nexus.svc.cluster.local:5000/mlbparks:${devTag}"
 
-    sh "oc set env dc/${destApp} --from=configmap/mlbparks-config -n ${GUID}-parks-prod"               
+        // Tag the built image with the production tag.
+        // Replace xyz-tasks-dev with the name of your dev project
+        openshiftTag alias: 'false', destStream: 'mlbparks', destTag: prodTag, destinationNamespace: prodNamespace, namespace: devNamespace, srcStream: 'mlbparks', srcTag: devTag, verbose: 'false'
+      }
 
-    // Create the service so that the label selector is applied by the refresh of parksmap cache 
-    sh "oc expose dc ${destApp} --port 8080 --labels=type=parksmap-backend -n ${GUID}-parks-prod" 
+      // Blue/Green Deployment into Production
+      // -------------------------------------
+      // Do not activate the new version yet.
+      def destApp   = "mlbparks-green"
+      def activeApp = ""
 
-    // Deploy the inactive application
-    openshiftDeploy depCfg: destApp, namespace: "${GUID}-parks-prod", verbose: 'false', waitTime: '', waitUnit: 'sec'
-    openshiftVerifyDeployment depCfg: destApp, namespace: "${GUID}-parks-prod", replicaCount: '1', verbose: 'false', verifyReplicaCount: 'true', waitTime: '', waitUnit: 'sec'
-    openshiftVerifyService namespace: "${GUID}-parks-prod", svcName: destApp, verbose: 'false'
+      stage('Blue/Green Production Deployment') {
+        // Replace xyz-tasks-dev and xyz-tasks-prod with
+        // your project names
+        activeApp = sh(returnStdout: true, script: "oc get route mlbparks -n ${GUID}-parks-prod -o jsonpath='{ .spec.to.name }'").trim()
+        if (activeApp == "mlbparks-green") {
+          destApp = "mlbparks-blue"
+        }
+        echo "Active Application:      " + activeApp
+        echo "Destination Application: " + destApp
+
+        // Update the Image on the Production Deployment Config
+        sh "oc set image dc/${destApp} ${destApp}=docker-registry.default.svc:5000/${GUID}-parks-prod/mlbparks:${prodTag} -n ${GUID}-parks-prod"
+
+        // Deploy the inactive application.
+        // Replace xyz-tasks-prod with the name of your production project
+        openshiftDeploy depCfg: destApp, namespace: prodNamespace, verbose: 'false', waitTime: '', waitUnit: 'sec'
+        openshiftVerifyDeployment depCfg: destApp, namespace: prodNamespace, replicaCount: '1', verbose: 'false', verifyReplicaCount: 'true', waitTime: '', waitUnit: 'sec'
+        openshiftVerifyService namespace: prodNamespace, svcName: destApp, verbose: 'false'
+      }
+
+      stage('Switch over to new Version') {
+        // Don't ask now
+        // input "Switch Production?"
+
+        echo "Switching Production application to ${destApp}."
+        // Replace xyz-tasks-prod with the name of your production project
+        sh 'oc patch route mlbparks -n ' + prodNamespace + ' -p \'{"spec":{"to":{"name":"' + destApp + '"}}}\''
+      }
 
     }
 
-    stage('Switch route to new Version') {
-    echo "Switching Production application to ${destApp}."
-    sh "oc patch route mlbparks -n ${GUID}-parks-prod -p '{\"spec\":{\"to\":{\"name\":\"" + destApp + "\"}}}'"
-    sh "oc delete svc ${activeApp} -n ${GUID}-parks-prod"
-    }
+ 
   }
 }
 

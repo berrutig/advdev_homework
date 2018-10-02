@@ -9,14 +9,18 @@ fi
 GUID=$1
 echo "Setting up Sonarqube in project $GUID-sonarqube"
 
+echo "Go to project $GUID-sonarqube"
+oc project ${GUID}-sonarqube
+
+
+# Import nexus Imagestream
+#oc import-image sonarqube --from=wkulhanek/sonarqube:6.7.4 --confirm
+
+# tag the image
+#oc tag sonarqube ${GUID}-sonarqube/sonarqube:6.7.4
+
 # Code to set up the SonarQube project.
 # Ideally just calls a template
-# oc new-app -f ../templates/sonarqube.yaml --param .....
-
+oc new-app -f ./Infrastructure/templates/sonarqube_db.yaml -n ${GUID}-parks-prod
+oc new-app -f ./Infrastructure/templates/sonarqube.yaml -n ${GUID}-parks-prod
 # To be Implemented by Student
-oc process -f ./Infrastructure/templates/sonar.yaml \
-    -n ${GUID}-sonarqube \
-    -p GUID=${GUID} \
-    | oc create -n ${GUID}-sonarqube -f -
-# oc rollout latest dc/sonarqube
-# oc create -f ./Infrastructure/templates/sonar.yaml -n ${GUID}-sonarqube

@@ -27,53 +27,47 @@ echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cl
 # * CLUSTER: the base url of the cluster used (e.g. na39.openshift.opentlc.com)
 
 # To be Implemented by Student
-# oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=2Gi --param VOLUME_CAPACITY=4Gi --param DISABLE_ADMINISTRATIVE_MONITORS=true -n ${GUID}-jenkins
+# Go to Jenkins project
+oc project ${GUID}-jenkins
+# Add roles to jenkins user in ${GUID}-jenkins
+oc policy add-role-to-user edit system:serviceaccount:${GUID}-jenkins:jenkins -n ${GUID}-jenkins
+oc policy add-role-to-user admin system:serviceaccount:gpte-jenkins:jenkins -n ${GUID}-jenkins
+# Create the Jenkins app
 oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=2Gi --param VOLUME_CAPACITY=4Gi -n ${GUID}-jenkins
+oc set resources dc/jenkins --limits=cpu=1 --requests=memory=2Gi,cpu=1 -n ${GUID}-jenkins
+# Create custom Jenkins Slave pod
+cat ./Dockerfile | oc new-build --name=jenkins-slave-appdev --dockerfile=- -n ${GUID}-jenkins
 
-# Pause rollout and update config
-oc rollout pause dc jenkins -n ${GUID}-jenkins
+oc set probe dc/jenkins -n $GUID-jenkins --liveness --failure-threshold 8 --initial-delay-seconds 600 -- echo ok
+oc set probe dc/jenkins -n $GUID-jenkins --readiness --failure-threshold 8 --initial-delay-seconds 360 --get-url=http://:8080/login
 
-# set probe for Jenkins
-oc set probe dc jenkins --readiness --initial-delay-seconds=1200 --timeout-seconds=480 -n ${GUID}-jenkins
-oc patch dc/jenkins -p '{"spec":{"strategy":{"recreateParams":{"timeoutSeconds":6000}}}}' -n ${GUID}-jenkins
-
-# Resume rollout 
-oc rollout resume dc jenkins -n ${GUID}-jenkins
-
-# Setup Jenkins Maven ImageStream
-oc new-build --name=maven-slave-pod --dockerfile=$'FROM docker.io/openshift/jenkins-slave-maven-centos7:v3.9\nUSER root\nRUN yum -y install skopeo apb && yum clean all\nUSER 1001' -n ${GUID}-jenkins
-
-# Sleep 30 seconds
-sleep 30
-
-# Wait for Jenkins ready
 while : ; do
-  echo "Checking if Jenkins is Ready..."
-  oc get pod -n ${GUID}-jenkins | grep -v "deploy\|build" | grep -q "1/1"
-  [[ "$?" == "1" ]] || break
-  echo "... not quite yet. Sleeping 20 seconds."
-  sleep 20
+    echo "Checking if Jenkins is Ready..."
+    oc get pod -n ${GUID}-jenkins | grep jenkins | grep -v build | grep -v deploy |grep "1/1.*Running"
+    [[ "$?" == "1" ]] || break
+    echo "...no. Sleeping 10 seconds."
+    sleep 10
 done
 
-# Add version 3.9 tag to Jenkins slave ImageStream
-oc tag maven-slave-pod:latest maven-slave-pod:v3.9 -n ${GUID}-jenkins
 
-# Create pipeline build configurations
-oc create -f ./Infrastructure/templates/mlbparks-pipeline.yaml -n ${GUID}-jenkins
-oc create -f ./Infrastructure/templates/nationalparks-pipeline.yaml -n ${GUID}-jenkins
-oc create -f ./Infrastructure/templates/parksmap-pipeline.yaml -n ${GUID}-jenkins
+#echo "Create pipelines for mlbparks, nationalparks and parksmap"
+#oc create -f ./Infrastructure/templates/pipelines/mlbparks-pipeline.yaml 
+#oc create -f ./Infrastructure/templates/pipelines/nationalparks-pipeline.yaml 
+#oc create -f ./Infrastructure/templates/pipelines/parksmap-pipeline.yaml 
 
-# oc process -f ./Infrastructure/templates/mlbparks-pipeline.yaml \
-#     -n ${GUID}-jenkins \
-#     | oc create -n ${GUID}-jenkins -f -
-# oc process -f ./Infrastructure/templates/nationalparks-pipeline.yaml \
-#     -n ${GUID}-jenkins \
-#     | oc create -n ${GUID}-jenkins -f -
-# oc process -f ./Infrastructure/templates/parksmap-pipeline.yaml \
-#     -n ${GUID}-jenkins \
-#     | oc create -n ${GUID}-jenkins -f -
+echo "Set new pipelines based on ${REPO} - ${GUID} - ${CLUSTER}"
+# Don't know why env vars are not created automatically
+oc new-build ${REPO} --name=mlbparks-pipeline --strategy=pipeline --context-dir=./MLBParks -l app=pipeline -n ${GUID}-jenkins
+oc env bc/mlbparks-pipeline GUID=${GUID} CLUSTER=${CLUSTER} -n ${GUID}-jenkins
+oc cancel-build mlbparks-pipeline-1 -n ${GUID}-jenkins
+oc new-build ${REPO} --name=nationalparks-pipeline --strategy=pipeline --context-dir=./Nationalparks -l app=pipeline -n ${GUID}-jenkins
+oc env bc/nationalparks-pipeline GUID=${GUID} CLUSTER=${CLUSTER} -n ${GUID}-jenkins
+oc cancel-build nationalparks-pipeline-1 -n ${GUID}-jenkins
+oc new-build ${REPO} --name=parksmap-pipeline --strategy=pipeline --context-dir=./ParksMap -l app=pipeline -n ${GUID}-jenkins
+oc env bc/parksmap-pipeline GUID=${GUID} CLUSTER=${CLUSTER} -n ${GUID}-jenkins
+oc cancel-build parksmap-pipeline-1 -n ${GUID}-jenkins
 
-# Setting environmental variables in build configs for pipeline
-oc set env bc/mlbparks-pipeline GUID=${GUID} REPO=${REPO} CLUSTER=${CLUSTER} -n ${GUID}-jenkins
-oc set env bc/nationalparks-pipeline GUID=${GUID} REPO=${REPO} CLUSTER=${CLUSTER} -n ${GUID}-jenkins
-oc set env bc/parksmap-pipeline GUID=${GUID} REPO=${REPO} CLUSTER=${CLUSTER} -n ${GUID}-jenkins
+
+
+
+
