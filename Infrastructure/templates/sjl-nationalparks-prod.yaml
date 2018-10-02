@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sjl-nationalparks-prod
+  name: 89a4-nationalparks-prod
 objects:
 - apiVersion: v1
   kind: DeploymentConfig
@@ -47,8 +47,8 @@ objects:
         containers:
           - envFrom:
               - configMapRef:
-                   name: sjl-nationalparks-blue-config
-            image: docker-registry.default.svc:5000/sjl-parks-dev/nationalparks:1.1-1
+                   name: 89a4-nationalparks-blue-config
+            image: docker-registry.default.svc:5000/89a4-parks-dev/nationalparks:1.1-1
             imagePullPolicy: IfNotPresent
             livenessProbe:
               failureThreshold: 3
@@ -124,8 +124,8 @@ objects:
         containers:
           - envFrom:
               - configMapRef:
-                   name: sjl-nationalparks-green-config
-            image: docker-registry.default.svc:5000/sjl-parks-dev/nationalparks:1.1-1
+                   name: 89a4-nationalparks-green-config
+            image: docker-registry.default.svc:5000/89a4-parks-dev/nationalparks:1.1-1
             imagePullPolicy: IfNotPresent
             livenessProbe:
               failureThreshold: 3
@@ -168,7 +168,7 @@ objects:
       app: nationalparks
     name: nationalparks
   spec:
-    host: nationalparks-sjl-parks-prod.apps.na39.openshift.opentlc.com
+    host: nationalparks-89a4-parks-prod.apps.na39.openshift.opentlc.com
     port:
       targetPort: 8080
     to:
@@ -235,8 +235,8 @@ objects:
     APPNAME: National Parks (Blue)
   kind: ConfigMap
   metadata:
-    name: sjl-nationalparks-blue-config
-    namespace: sjl-parks-prod
+    name: 89a4-nationalparks-blue-config
+    namespace: 89a4-parks-prod
 - apiVersion: v1
   data:
     DB_HOST: mongodb
@@ -247,6 +247,6 @@ objects:
     APPNAME: National Parks (Green)
   kind: ConfigMap
   metadata:
-    name: sjl-nationalparks-green-config
-    namespace: sjl-parks-prod
+    name: 89a4-nationalparks-green-config
+    namespace: 89a4-parks-prod
 
