@@ -235,8 +235,8 @@ objects:
     APPNAME: MLB Parks (Blue)
   kind: ConfigMap
   metadata:
-    name: sjl-mlbparks-blue-config
-    namespace: sjl-parks-prod
+    name: 89a4-mlbparks-blue-config
+    namespace: 89a4-parks-prod
 - apiVersion: v1
   data:
     DB_HOST: mongodb
