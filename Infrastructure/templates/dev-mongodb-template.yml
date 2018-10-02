@@ -1,0 +1,91 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: mongodb
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    app: mongodb
+    deploymentconfig: mongodb
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        deploymentconfig: mongodb
+    spec:
+      containers:
+        - env:                      
+            - name: MONGODB_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: MONGODB_USER
+                  name: dev-mongodb-config-map
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: MONGODB_PASSWORD
+                  name: dev-mongodb-config-map
+            - name: MONGODB_ADMIN_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: MONGODB_ADMIN_PASSWORD
+                  name: dev-mongodb-config-map
+            - name: MONGODB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  key: MONGODB_DATABASE
+                  name: dev-mongodb-config-map
+          image: 'registry.access.redhat.com/rhscl/mongodb-34-rhel7:latest'            
+          imagePullPolicy: Always
+          name: mongodb
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - '-i'
+                - '-c'
+                - >-
+                  mongo 127.0.0.1:27017/$MONGODB_DATABASE -u $MONGODB_USER -p
+                  $MONGODB_PASSWORD --eval="quit()"
+            failureThreshold: 3
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1              
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/mongodb/data
+              name: mongodb-volume-1
+            - mountPath: /data
+              name: mongodb-pv
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: mongodb-volume-1
+        - name: mongodb-pv
+          persistentVolumeClaim:
+            claimName: mongodb-pvc
+  test: false
+  triggers:
+    - type: ConfigChange
