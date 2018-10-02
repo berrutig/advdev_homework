@@ -5,13 +5,13 @@ metadata:
 spec:
   source:
     git:
-      uri: "https://github.com/SammZhu/advdev_homework"
+      uri: "https://github.com/dulecux/advdev_homework"
       ref: "master"
   strategy:
     jenkinsPipelineStrategy:
        env:
          - name: GUID
-           value: a7fd
+           value: 89a4
          - name: CLUSTER
            value: na39.openshift.opentlc.com
        jenkinsfilePath: ParksMap/Jenkinsfile
