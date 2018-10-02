@@ -1,9 +1,0 @@
-apiVersion: v1
-data:
-  MONGODB_ADMIN_PASSWORD: mongodb
-  MONGODB_DATABASE: parks
-  MONGODB_PASSWORD: mongodb
-  MONGODB_USER: mongodb
-kind: ConfigMap
-metadata:  
-  name: dev-mongodb-config-map

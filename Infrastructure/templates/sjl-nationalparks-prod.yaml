@@ -1,0 +1,252 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: sjl-nationalparks-prod
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    generation: 24
+    labels:
+      app: nationalparks-blue
+    name: nationalparks-blue
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: nationalparks-blue
+      deploymentconfig: nationalparks-blue
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        post:
+          failurePolicy: Abort
+          execNewPod:
+            containerName: nationalparks-blue 
+            command: [ "curl","-s", "http://nationalparks-prod.apps.na39.openshift.opentlc.com/ws/data/load" ] 
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: nationalparks-blue
+          deploymentconfig: nationalparks-blue
+      spec:
+        containers:
+          - envFrom:
+              - configMapRef:
+                   name: sjl-nationalparks-blue-config
+            image: docker-registry.default.svc:5000/sjl-parks-dev/nationalparks:1.1-1
+            imagePullPolicy: IfNotPresent
+            livenessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /ws/healthz/
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 120
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 2
+            readinessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /ws/healthz/
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 20
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 2
+            name: nationalparks-blue
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers: []
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    generation: 24
+    labels:
+      app: nationalparks-green
+    name: nationalparks-green
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: nationalparks-green
+      deploymentconfig: nationalparks-green
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        post:
+          failurePolicy: Abort
+          execNewPod:
+            containerName: nationalparks-green 
+            command: [ "curl","-s", "http://nationalparks-prod.apps.na39.openshift.opentlc.com/ws/data/load" ] 
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: nationalparks-green
+          deploymentconfig: nationalparks-green
+      spec:
+        containers:
+          - envFrom:
+              - configMapRef:
+                   name: sjl-nationalparks-green-config
+            image: docker-registry.default.svc:5000/sjl-parks-dev/nationalparks:1.1-1
+            imagePullPolicy: IfNotPresent
+            livenessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /ws/healthz/
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 120
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 2
+            readinessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /ws/healthz/
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 20
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 2
+            name: nationalparks-green
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers: []
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: null
+    labels:
+      app: nationalparks
+    name: nationalparks
+  spec:
+    host: nationalparks-sjl-parks-prod.apps.na39.openshift.opentlc.com
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: nationalparks-green
+      weight: 100
+    wildcardPolicy: None
+  status:
+    ingress:
+    - conditions:
+      - lastTransitionTime: 2018-09-14T12:32:39Z
+        status: "True"
+        type: Admitted
+      host: nationalparks.apps.na39.openshift.opentlc.com
+      routerName: router
+      wildcardPolicy: None
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: nationalparks-blue
+      type: parksmap-backend
+    name: nationalparks-blue
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: nationalparks-blue
+      deploymentconfig: nationalparks-blue
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: nationalparks-green
+      type: parksmap-backend
+    name: nationalparks-green
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: nationalparks-green
+      deploymentconfig: nationalparks-green
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  data:
+    DB_HOST: mongodb
+    DB_PORT: '27017'
+    DB_USERNAME: mongodb
+    DB_PASSWORD: mongodb
+    DB_NAME: parks
+    APPNAME: National Parks (Blue)
+  kind: ConfigMap
+  metadata:
+    name: sjl-nationalparks-blue-config
+    namespace: sjl-parks-prod
+- apiVersion: v1
+  data:
+    DB_HOST: mongodb
+    DB_PORT: '27017'
+    DB_USERNAME: mongodb
+    DB_PASSWORD: mongodb
+    DB_NAME: parks
+    APPNAME: National Parks (Green)
+  kind: ConfigMap
+  metadata:
+    name: sjl-nationalparks-green-config
+    namespace: sjl-parks-prod
+

@@ -1,0 +1,211 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: sjl-parks-dev
+objects:
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewBuild
+    creationTimestamp: '2018-09-16T22:14:32Z'
+    labels:
+      build: parksmap
+    name: parksmap
+    namespace: sjl-parks-dev
+  spec:
+    failedBuildsHistoryLimit: 5
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: 'parksmap:latest'
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      binary: {}
+      type: Binary
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: 'redhat-openjdk18-openshift:1.2'
+          namespace: openshift
+      type: Source
+    successfulBuildsHistoryLimit: 5
+    triggers:
+      - github:
+          secret: OVBsoa5jbi6Pm7UrWxDh
+        type: GitHub
+      - generic:
+          secret: 16RQ_vSvd9Py2eri9z2B
+        type: Generic
+  status:
+    lastVersion: 0
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewBuild
+    creationTimestamp: '2018-09-16T22:14:32Z'
+    generation: 1
+    labels:
+      build: parksmap
+    name: parksmap
+    namespace: sjl-parks-dev
+  spec:
+    lookupPolicy:
+      local: false
+  status:
+    dockerImageRepository: 'docker-registry.default.svc:5000/sjl-parks-dev/parksmap'
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    generation: 24
+    labels:
+      app: parksmap
+    name: parksmap
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: parksmap
+      deploymentconfig: parksmap
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        post:
+          failurePolicy: Abort
+          execNewPod:
+            containerName: parksmap 
+            command: [ "curl","-s", "http://parksmap.apps.na39.openshift.opentlc.com/ws/data/load" ] 
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: parksmap
+          deploymentconfig: parksmap
+      spec:
+        containers:
+          - envFrom:
+              - configMapRef:
+                   name: sjl-parksmaps-dev-config
+            image: docker-registry.default.svc:5000/sjl-parks-dev/parksmap:1.1-1
+            imagePullPolicy: IfNotPresent
+            livenessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /ws/healthz/
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 120
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 2
+            readinessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /ws/healthz/
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 20
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 2
+            name: parksmap
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers: []
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: null
+    labels:
+      app: parksmap
+    name: parksmap
+  spec:
+    host: parksmap-sjl-parks-dev.apps.na39.openshift.opentlc.com
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: parksmap
+      weight: 100
+    wildcardPolicy: None
+  status:
+    ingress:
+    - conditions:
+      - lastTransitionTime: 2018-09-14T12:32:39Z
+        status: "True"
+        type: Admitted
+      host: parksmap.apps.na39.openshift.opentlc.com
+      routerName: router
+      wildcardPolicy: None
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: parksmap
+      type: parksmap-backend
+    name: parksmap
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: parksmap
+      deploymentconfig: parksmap
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  data:
+    DB_HOST: mongodb
+    DB_PORT: '27017'
+    DB_USERNAME: mongodb
+    DB_PASSWORD: mongodb
+    DB_NAME: parks
+    APPNAME: ParksMap (Dev)
+  kind: ConfigMap
+  metadata:
+    name: sjl-parksmaps-dev-config
+    namespace: sjl-parks-dev
+# Role binding
+- apiVersion: authorization.openshift.io/v1
+  groupNames: null
+  kind: RoleBinding
+  metadata:
+    name: default_view
+  roleRef:
+    name: view
+  subjects:
+  - kind: ServiceAccount
+    name: default
+  userNames:
+  - system:serviceaccount:sjl-parks-dev:default
