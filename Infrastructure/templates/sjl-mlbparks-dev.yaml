@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sjl-parks-dev
+  name: 89a4-parks-dev
 objects:
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
@@ -13,7 +13,7 @@ objects:
     labels:
       build: mlbparks
     name: mlbparks
-    namespace: sjl-parks-dev
+    namespace: 89a4-parks-dev
   spec:
     failedBuildsHistoryLimit: 5
     nodeSelector: null
@@ -59,7 +59,7 @@ objects:
     lookupPolicy:
       local: false
   status:
-    dockerImageRepository: 'docker-registry.default.svc:5000/sjl-parks-dev/mlbparks'
+    dockerImageRepository: 'docker-registry.default.svc:5000/89a4-parks-dev/mlbparks'
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -104,7 +104,7 @@ objects:
           - envFrom:
               - configMapRef:
                    name: sjl-parks-dev-config
-            image: docker-registry.default.svc:5000/sjl-parks-dev/mlbparks:1.1-1
+            image: docker-registry.default.svc:5000/89a4-parks-dev/mlbparks:1.1-1
             imagePullPolicy: IfNotPresent
             livenessProbe:
               failureThreshold: 3
@@ -147,7 +147,7 @@ objects:
       app: mlbparks
     name: mlbparks
   spec:
-    host: mlbparks-sjl-parks-dev.apps.na39.openshift.opentlc.com
+    host: mlbparks-89a4-parks-dev.apps.na39.openshift.opentlc.com
     port:
       targetPort: 8080
     to:
@@ -194,5 +194,5 @@ objects:
     APPNAME: MLB Parks (Dev)
   kind: ConfigMap
   metadata:
-    name: sjl-parks-dev-config
-    namespace: sjl-parks-dev
+    name: 89a4-parks-dev-config
+    namespace: 89a4-parks-dev
