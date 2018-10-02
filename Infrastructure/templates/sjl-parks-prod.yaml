@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sjl-parks-prod
+  name: 89a4-parks-prod
 objects:
 # Role binding
 - apiVersion: authorization.openshift.io/v1
@@ -16,7 +16,7 @@ objects:
   - kind: ServiceAccount
     name: default
   userNames:
-  - system:serviceaccount:sjl-parks-dev:default
+  - system:serviceaccount:89a4-parks-dev:default
 - apiVersion: v1
   kind: Service
   metadata:
@@ -119,19 +119,19 @@ objects:
   kind: RoleBinding
   metadata:
     name: system_image-puller
-    namespace: sjl-parks-dev
+    namespace: 89a4-parks-dev
   roleRef:
     name: system:image-puller
   subjects:
   - kind: ServiceAccount
     name: default
   userNames:
-  - system:system:serviceaccount:sjl-parks-prod:default
+  - system:system:serviceaccount:89a4-parks-prod:default
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: 'system:image-pullers'
-    namespace: sjl-parks-dev
+    namespace: 89a4-parks-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -139,16 +139,16 @@ objects:
   subjects:
     - apiGroup: rbac.authorization.k8s.io
       kind: Group
-      name: 'system:serviceaccounts:sjl-parks-prod'
+      name: 'system:serviceaccounts:89a4-parks-prod'
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     annotations:
       openshift.io/generated-by: OpenShiftNewApp
     labels:
-      app: sjl-parks-prod
+      app: 89a4-parks-prod
     name: system_image-puller
-    namespace: sjl-parks-prod
+    namespace: 89a4-parks-prod
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -156,4 +156,4 @@ objects:
   subjects:
     - apiGroup: rbac.authorization.k8s.io
       kind: User
-      name: 'system:system:serviceaccount:sjl-parks-prod:default'
+      name: 'system:system:serviceaccount:89a4-parks-prod:default'
