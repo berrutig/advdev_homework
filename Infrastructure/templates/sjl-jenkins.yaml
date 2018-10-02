@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sjl-jenkins
+  name: 89a4-jenkins
 objects:
 - apiVersion: v1
   kind: DeploymentConfig
