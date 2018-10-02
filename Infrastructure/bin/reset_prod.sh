@@ -18,7 +18,3 @@ echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to Gr
 # rollout followed by a Green rollout.
 
 # To be Implemented by Student
-
-oc patch route mlbparks-binary -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"mlbparks-binary-green"}}}'
-oc patch route nationalparks-binary -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"nationalparks-binary-green"}}}'
-oc patch route parksmap-binary -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"parksmap-binary-green"}}}'
