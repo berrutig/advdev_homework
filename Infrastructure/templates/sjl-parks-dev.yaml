@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sjl-parks-dev
+  name: 89a4-parks-dev
 objects:
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
@@ -13,7 +13,7 @@ objects:
     labels:
       build: mlbparks-binary
     name: mlbparks-binary
-    namespace: sjl-parks-dev
+    namespace: 89a4-parks-dev
   spec:
     failedBuildsHistoryLimit: 5
     nodeSelector: null
@@ -54,12 +54,12 @@ objects:
     labels:
       build: mlbparks-binary
     name: mlbparks-binary
-    namespace: sjl-parks-dev
+    namespace: 89a4-parks-dev
   spec:
     lookupPolicy:
       local: false
   status:
-    dockerImageRepository: 'docker-registry.default.svc:5000/sjl-parks-dev/mlbparks-binary'
+    dockerImageRepository: 'docker-registry.default.svc:5000/89a4-parks-dev/mlbparks-binary'
 - apiVersion: v1
   kind: ServiceAccount
   metadata:
@@ -82,7 +82,7 @@ objects:
   - kind: ServiceAccount
     name: jenkins
   userNames:
-  - system:serviceaccount:sjl-jenkins:jenkins
+  - system:serviceaccount:89a4-jenkins:jenkins
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -127,7 +127,7 @@ objects:
           - envFrom:
               - configMapRef:
                    name: sjl-parks-dev-config
-            image: docker-registry.default.svc:5000/sjl-parks-dev/mlbparks-binary:1.1-1
+            image: docker-registry.default.svc:5000/89a4-parks-dev/mlbparks-binary:1.1-1
             imagePullPolicy: IfNotPresent
             livenessProbe:
               failureThreshold: 3
@@ -217,5 +217,5 @@ objects:
     APPNAME: MLB Parks (Dev)
   kind: ConfigMap
   metadata:
-    name: sjl-parks-dev-config
-    namespace: sjl-parks-dev
+    name: 89a4-parks-dev-config
+    namespace: 89a4-parks-dev
