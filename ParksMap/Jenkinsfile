@@ -24,7 +24,7 @@ podTemplate(
 
     // Checkout Source Code
     stage('Checkout Source') {
-      git 'https://github.com/misanche/ocpadvdev.git'
+      git 'https://github.com/dulecux/advdev_homework.git'
     }
 
     echo "Copy nexus_settings.xml to current directoy"
