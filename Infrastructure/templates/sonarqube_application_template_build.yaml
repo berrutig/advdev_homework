@@ -2,42 +2,8 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: sonarqube
+  name: sonarqube-application-build
 objects:
-- apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    labels:
-      app: sonarqube
-    name: sonarqube-pvc
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: 4Gi
-- apiVersion: v1
-  kind: Service
-  metadata:
-    annotations:
-      openshift.io/generated-by: OpenShiftNewApp
-    creationTimestamp: null
-    labels:
-      app: sonarqube
-    name: sonarqube
-  spec:
-    ports:
-    - name: 9000-tcp
-      port: 9000
-      protocol: TCP
-      targetPort: 9000
-    selector:
-      app: sonarqube
-      deploymentconfig: sonarqube
-    sessionAffinity: None
-    type: ClusterIP
-  status:
-    loadBalancer: {}
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -47,13 +13,15 @@ objects:
     generation: 1
     labels:
       app: sonarqube
+      role: application
+      component: infrastructure
     name: sonarqube
   spec:
     replicas: 1
     revisionHistoryLimit: 10
     selector:
       app: sonarqube
-      deploymentconfig: sonarqube
+      deploymentconfig: sonarqube 
     strategy:
       activeDeadlineSeconds: 21600
       recreateParams:
@@ -73,25 +41,41 @@ objects:
         creationTimestamp: null
         labels:
           app: sonarqube
+          role: application
+          component: infrastructure
           deploymentconfig: sonarqube
       spec:
         containers:
         - env:
           - name: SONARQUBE_JDBC_PASSWORD
-            value: sonar
-          - name: SONARQUBE_JDBC_URL
-            value: jdbc:postgresql://postgresql/sonar
+            valueFrom:
+              secretKeyRef:
+                key: DATABASE_PASSWORD
+                name: sonar-secrets
+          - name: SONARQUBE_DATABASE
+            valueFrom:
+              secretKeyRef:
+                key: DATABASE_NAME
+                name: sonar-secrets
           - name: SONARQUBE_JDBC_USERNAME
-            value: sonar
-          image: wkulhanek/sonarqube:6.7.4
+            valueFrom:
+              secretKeyRef:
+                key: DATABASE_USER
+                name: sonar-secrets
+          - name: SONARQUBE_JDBC_URL
+            valueFrom:
+              secretKeyRef:
+                key: JDBC_URL
+                name: sonar-secrets
+          image: docker.io/wkulhanek/sonarqube@sha256:8881232a1cd5636768df366eb8803255276618bf6252b01516c0a70bcaaf4943
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
               command:
               - echo
-              - ok
+              - alive
             failureThreshold: 3
-            initialDelaySeconds: 40
+            initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
@@ -105,7 +89,7 @@ objects:
               path: /about
               port: 9000
               scheme: HTTP
-            initialDelaySeconds: 20
+            initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
@@ -132,6 +116,16 @@ objects:
             claimName: sonarqube-pvc
     test: false
     triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - sonarqube
+        from:
+          kind: ImageStreamTag
+          name: sonarqube:6.7.4
+          namespace: GUID-sonarqube
+      type: ImageChange
   status:
     availableReplicas: 0
     latestVersion: 0
@@ -140,29 +134,36 @@ objects:
     unavailableReplicas: 0
     updatedReplicas: 0
 - apiVersion: v1
-  kind: Route
+  kind: PersistentVolumeClaim
+  metadata:
+    name: sonarqube-pvc
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 4Gi
+- apiVersion: v1
+  kind: Service
   metadata:
     annotations:
-      openshift.io/host.generated: "true"
+      openshift.io/generated-by: OpenShiftNewApp
     creationTimestamp: null
     labels:
       app: sonarqube
+      role: application-service
+      component: infrastructure
     name: sonarqube
   spec:
-    host: sonarqube-89a4-sonarqube.apps.na39.openshift.opentlc.com
-    port:
-      targetPort: 9000-tcp
-    to:
-      kind: Service
-      name: sonarqube
-      weight: 100
-    wildcardPolicy: None
+    ports:
+    - name: 9000-tcp
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+    selector:
+      app: sonarqube
+      deploymentconfig: sonarqube
+    sessionAffinity: None
+    type: ClusterIP
   status:
-    ingress:
-    - conditions:
-      - lastTransitionTime: 2018-08-21T06:02:21Z
-        status: "True"
-        type: Admitted
-      host: sonarqube-89a4-sonarqube.apps.na39.openshift.opentlc.com
-      routerName: router
-      wildcardPolicy: None
+    loadBalancer: {}

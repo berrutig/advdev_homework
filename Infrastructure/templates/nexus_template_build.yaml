@@ -2,61 +2,8 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: nexus
+  name: GUID-nexus3-build
 objects:
-- apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    labels:
-      app: nexus3
-    name: nexus-pvc
-  spec:
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: 4Gi
-- apiVersion: v1
-  kind: Service
-  metadata:
-    creationTimestamp: null
-    labels:
-      app: nexus3
-    name: nexus-registry
-  spec:
-    ports:
-    - port: 5000
-      protocol: TCP
-      targetPort: 5000
-    selector:
-      app: nexus3
-      deploymentconfig: nexus3
-    sessionAffinity: None
-    type: ClusterIP
-  status:
-    loadBalancer: {}
-- apiVersion: v1
-  kind: Service
-  metadata:
-    annotations:
-      openshift.io/generated-by: OpenShiftNewApp
-    creationTimestamp: null
-    labels:
-      app: nexus3
-    name: nexus3
-  spec:
-    ports:
-    - name: 8081-tcp
-      port: 8081
-      protocol: TCP
-      targetPort: 8081
-    selector:
-      app: nexus3
-      deploymentconfig: nexus3
-    sessionAffinity: None
-    type: ClusterIP
-  status:
-    loadBalancer: {}
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -95,13 +42,13 @@ objects:
           deploymentconfig: nexus3
       spec:
         containers:
-        - image: sonatype/nexus3@sha256:e57d22b59b607d055f9241f1613073ec1b46c37afae30d67707072f19a87d244
+        - image: docker.io/sonatype/nexus3@sha256:c46f74741401ed538e94cc51a272a95efef5db60a9091d95f93d339fd09fa219
           imagePullPolicy: Always
           livenessProbe:
             exec:
               command:
               - echo
-              - ok
+              - alive
             failureThreshold: 3
             initialDelaySeconds: 60
             periodSeconds: 10
@@ -142,6 +89,16 @@ objects:
             claimName: nexus-pvc
     test: false
     triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - nexus3
+        from:
+          kind: ImageStreamTag
+          name: nexus3:latest
+          namespace: GUID-nexus
+      type: ImageChange
   status:
     availableReplicas: 0
     latestVersion: 0
@@ -150,59 +107,53 @@ objects:
     unavailableReplicas: 0
     updatedReplicas: 0
 - apiVersion: v1
-  kind: Route
+  kind: PersistentVolumeClaim
   metadata:
-    annotations:
-      openshift.io/host.generated: "true"
+    name: nexus-pvc
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 4Gi
+- apiVersion: v1
+  kind: Service
+  metadata:
     creationTimestamp: null
     labels:
       app: nexus3
-    name: nexus-registry
+    name: nexus3-registry
   spec:
-    host: nexus-registry-89a4-nexus.apps.na39.openshift.opentlc.com
-    port:
+    ports:
+    - port: 5000
+      protocol: TCP
       targetPort: 5000
-    tls:
-      termination: edge
-    to:
-      kind: Service
-      name: nexus-registry
-      weight: 100
-    wildcardPolicy: None
+    selector:
+      app: nexus3
+      deploymentconfig: nexus3
+    sessionAffinity: None
+    type: ClusterIP
   status:
-    ingress:
-    - conditions:
-      - lastTransitionTime: 2018-08-20T11:22:21Z
-        status: "True"
-        type: Admitted
-      host: nexus-registry-89a4-nexus.apps.na39.openshift.opentlc.com
-      routerName: router
-      wildcardPolicy: None
+    loadBalancer: {}
 - apiVersion: v1
-  kind: Route
+  kind: Service
   metadata:
     annotations:
       openshift.io/generated-by: OpenShiftNewApp
-      openshift.io/host.generated: "true"
     creationTimestamp: null
     labels:
       app: nexus3
     name: nexus3
   spec:
-    host: nexus3-89a4-nexus.apps.na39.openshift.opentlc.com
-    port:
-      targetPort: 8081-tcp
-    to:
-      kind: Service
-      name: nexus3
-      weight: 100
-    wildcardPolicy: None
+    ports:
+    - name: 8081-tcp
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+    selector:
+      app: nexus3
+      deploymentconfig: nexus3
+    sessionAffinity: None
+    type: ClusterIP
   status:
-    ingress:
-    - conditions:
-      - lastTransitionTime: 2018-08-20T10:05:41Z
-        status: "True"
-        type: Admitted
-      host: nexus3-89a4-nexus.apps.na39.openshift.opentlc.com
-      routerName: router
-      wildcardPolicy: None
+    loadBalancer: {}
