@@ -25,7 +25,7 @@ podTemplate(
 
     stage('Checkout Source Code') {
       echo "Checking out Source Code"
-      git url: 'https://github.com/xingguang2013/advdev_homework_template.git'
+      git url: 'https://github.com/dulecux/advdev_homework.git'
     }
 
     def groupId = getGroupIdFromPom("./ParksMap/pom.xml")
