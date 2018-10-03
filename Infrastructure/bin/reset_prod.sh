@@ -8,28 +8,50 @@ if [ "$#" -ne 1 ]; then
 fi
 
 GUID=$1
-echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to deploy Green Services on next run"
+echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to Green Services"
 
-## Reseting MLBParks Production to blue deployment ##
-# Delete configmap and re-create with Blue APPNAME
-oc delete configmap mlbparks-config -n ${GUID}-parks-prod --ignore-not-found=true
-oc create configmap mlbparks-config --from-literal=APPNAME='MLB Parks (Blue)' -n ${GUID}-parks-prod
-# Delete and re-create backend service to point to blue deployment
-oc delete service mlbparks -n ${GUID}-parks-prod --ignore-not-found=true
-oc expose dc mlbparks-blue --name=mlbparks --port 8080 --labels=type=parksmap-backend,activeApp=mlbparks-blue -n ${GUID}-parks-prod
+# Code to reset the parks production environment to make
+# all the green services/routes active.
+# This script will be called in the grading pipeline
+# if the pipeline is executed without setting
+# up the whole infrastructure to guarantee a Blue
+# rollout followed by a Green rollout.
 
-## Resetting NationalParks Production to blue deployment ##
-# Delete configmap and re-create with Blue APPNAME
-oc delete configmap nationalparks-config -n ${GUID}-parks-prod --ignore-not-found=true
-oc create configmap nationalparks-config --from-literal=APPNAME='National Parks (Blue)' -n ${GUID}-parks-prod
-# Delete and re-create backend service to point to blue deployment
-oc delete service nationalparks -n ${GUID}-parks-prod --ignore-not-found=true
-oc expose dc nationalparks-blue --name=nationalparks --port 8080 --labels=type=parksmap-backend,activeApp=nationalparks-blue -n ${GUID}-parks-prod
+# To be Implemented by Student
 
-## Resetting ParksMap Production to blue deployment ##
-# Delete configmap and re-create with Blue APPNAME
-oc delete configmap parksmap-config -n ${GUID}-parks-prod --ignore-not-found=true
-oc create configmap parksmap-config --from-literal=APPNAME='ParksMap (Blue)' -n ${GUID}-parks-prod
-# Patch route to point to blue deployment
-oc patch route parksmap -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"parksmap-blue"}}}'
+switch_service_color 'mlbparks' "${GUID}" "${ORIGIN}"
 
+switch_service_color 'nationalparks' "${GUID}" "${ORIGIN}"
+
+switch_service_color 'parksmap' "${GUID}" "${ORIGIN}"
+
+switch_service_color() {
+  SERVICE=$1
+  GUID=$2
+  COLOR_RESPONSE=$3
+
+  echo "app -> $1 / user ->  $2 / current color -> $3"
+
+  if [[ $COLOR_RESPONSE = *"Blue"* ]]; then
+    CURRENT='blue'
+    TARGET='green'
+  else
+    CURRENT='green'
+    TARGET='blue'
+  fi
+
+  SERVICE_CURRENT=${SERVICE}-${CURRENT}
+  SERVICE_TARGET=${SERVICE}-${TARGET}
+
+  echo "Setting ${SERVICE} Service in Parks Production Environment in project ${GUID}-prod from ${CURRENT} to ${TARGET}"
+
+  oc scale dc/${SERVICE_TARGET} --replicas=1 -n "${GUID}-parks-prod"
+
+  oc rollout latest dc/${SERVICE_TARGET} -n "${GUID}-parks-prod"
+
+  oc patch service/${SERVICE} \
+    -p "{\"metadata\":{\"labels\":{\"app\":\"${SERVICE_TARGET}\", \"template\":\"${SERVICE_TARGET}\"}}, \"spec\":{\"selector\":{\"app\":\"${SERVICE_TARGET}\", \"deploymentconfig\":\"${SERVICE_TARGET}\"}}}" \
+    -n "${GUID}-parks-prod"
+
+  oc scale dc/${SERVICE_CURRENT} --replicas=0 -n "${GUID}-parks-prod"
+}
