@@ -25,7 +25,7 @@ parameters:
 - name: REPO
   displayName: REPO
   description: repo
-  value: https://github.com/ddibartolomei/ocp_advdev_homework
+  value: https://github.com/dulecux/advdev_homework
   required: true
 - name: GUID
   displayName: GUID
