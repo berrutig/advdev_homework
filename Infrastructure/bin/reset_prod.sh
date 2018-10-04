@@ -19,39 +19,37 @@ echo "Resetting Parks Production Environment in project ${GUID}-parks-prod to Gr
 
 # To be Implemented by Student
 
-switch_service_color 'mlbparks' "${GUID}" "${ORIGIN}"
+# Reset mlbparks app
+oc delete svc mlbparks-green -n ${GUID}-parks-prod
+oc delete svc mlbparks-blue -n ${GUID}-parks-prod
+oc expose dc mlbparks-green --port 8080 -l type=parksmap-backend -n ${GUID}-parks-prod
+oc expose dc mlbparks-blue --port 8080 -n ${GUID}-parks-prod
+mlbparksCurrent=$(oc get route mlbparks -n ${GUID}-parks-prod --template='{{ .spec.to.name}}')
+if [ "$mlbparksCurrent" == "mlbparks-blue" ]
+then
+  oc patch route mlbparks -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"mlbparks-green"}}}'
+else
+  echo "mlbparks route not patched because it is already on green target"
+fi
 
-switch_service_color 'nationalparks' "${GUID}" "${ORIGIN}"
+# Reset nationalparks app
+oc delete svc nationalparks-green -n ${GUID}-parks-prod
+oc delete svc nationalparks-blue -n ${GUID}-parks-prod
+oc expose dc nationalparks-green --port 8080 -l type=parksmap-backend -n ${GUID}-parks-prod
+oc expose dc nationalparks-blue --port 8080 -n ${GUID}-parks-prod
+nationalparksCurrent=$(oc get route nationalparks -n ${GUID}-parks-prod --template='{{ .spec.to.name}}')
+if [ "$nationalparksCurrent" == "nationalparks-blue" ]
+then
+  oc patch route nationalparks -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"nationalparks-green"}}}'
+else
+  echo "nationalparks route not patched because it is already on green target"
+fi
 
-switch_service_color 'parksmap' "${GUID}" "${ORIGIN}"
-
-switch_service_color() {
-  SERVICE=$1
-  GUID=$2
-  COLOR_RESPONSE=$3
-
-  echo "app -> $1 / user ->  $2 / current color -> $3"
-
-  if [[ $COLOR_RESPONSE = *"Blue"* ]]; then
-    CURRENT='blue'
-    TARGET='green'
-  else
-    CURRENT='green'
-    TARGET='blue'
-  fi
-
-  SERVICE_CURRENT=${SERVICE}-${CURRENT}
-  SERVICE_TARGET=${SERVICE}-${TARGET}
-
-  echo "Setting ${SERVICE} Service in Parks Production Environment in project ${GUID}-prod from ${CURRENT} to ${TARGET}"
-
-  oc scale dc/${SERVICE_TARGET} --replicas=1 -n "${GUID}-parks-prod"
-
-  oc rollout latest dc/${SERVICE_TARGET} -n "${GUID}-parks-prod"
-
-  oc patch service/${SERVICE} \
-    -p "{\"metadata\":{\"labels\":{\"app\":\"${SERVICE_TARGET}\", \"template\":\"${SERVICE_TARGET}\"}}, \"spec\":{\"selector\":{\"app\":\"${SERVICE_TARGET}\", \"deploymentconfig\":\"${SERVICE_TARGET}\"}}}" \
-    -n "${GUID}-parks-prod"
-
-  oc scale dc/${SERVICE_CURRENT} --replicas=0 -n "${GUID}-parks-prod"
-}
+# Reset parksmap app
+parksmapCurrent=$(oc get route parksmap -n ${GUID}-parks-prod --template='{{ .spec.to.name}}')
+if [ "$parksmapCurrent" == "parksmap-blue" ]
+then
+  oc patch route parksmap -n ${GUID}-parks-prod -p '{"spec":{"to":{"name":"parksmap-green"}}}'
+else
+  echo "parksmap route not patched because it is already on green target"
+fi

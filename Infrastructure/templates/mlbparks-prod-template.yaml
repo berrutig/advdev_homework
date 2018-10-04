@@ -1,0 +1,330 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: mlbparks-prod-template
+objects:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: mlbparks-green-config
+  data:
+    db_host: ${DB_HOST}
+    db_port: ${DB_PORT}
+    db_username: ${DB_USERNAME}
+    db_password: ${DB_PASSWORD}
+    db_name: ${DB_NAME}
+    db_replicaset: ${DB_REPLICASET}
+    app_name: "MLB Parks (Green)"
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: mlbparks-blue-config
+  data:
+    db_host: ${DB_HOST}
+    db_port: ${DB_PORT}
+    db_username: ${DB_USERNAME}
+    db_password: ${DB_PASSWORD}
+    db_name: ${DB_NAME}
+    db_replicaset: ${DB_REPLICASET}
+    app_name: "MLB Parks (Blue)"
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: mlbparks-green
+    name: mlbparks-green
+  spec:
+    replicas: 1
+    selector:
+      app: mlbparks-green
+      deploymentconfig: mlbparks-green
+    strategy:
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+        post:
+          execNewPod:
+            command:
+            - /bin/sh
+            - -c
+            - curl http://mlbparks-green:8080/ws/data/load/
+            containerName: mlbparks-green
+          failurePolicy: ignore
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: mlbparks-green
+          deploymentconfig: mlbparks-green
+      spec:
+        containers:
+        - image: ' '
+          imagePullPolicy: IfNotPresent
+          name: mlbparks-green
+          livenessProbe:
+            exec:
+              command:
+              - echo
+              - ok
+            failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ws/healthz/
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 256Mi
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-green-config
+                key: db_host
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-green-config
+                key: db_port
+          - name: DB_USERNAME
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-green-config
+                key: db_username
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-green-config
+                key: db_password
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-green-config
+                key: db_name
+          - name: DB_REPLICASET
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-green-config
+                key: db_replicaset
+          - name: APPNAME
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-green-config
+                key: app_name
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers: []
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: mlbparks-blue
+    name: mlbparks-blue
+  spec:
+    replicas: 1
+    selector:
+      app: mlbparks-blue
+      deploymentconfig: mlbparks-blue
+    strategy:
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+        post:
+          execNewPod:
+            command:
+            - /bin/sh
+            - -c
+            - curl http://mlbparks-blue:8080/ws/data/load/
+            containerName: mlbparks-blue
+          failurePolicy: ignore
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: mlbparks-blue
+          deploymentconfig: mlbparks-blue
+      spec:
+        containers:
+        - image: ' '
+          imagePullPolicy: IfNotPresent
+          name: mlbparks-blue
+          livenessProbe:
+            exec:
+              command:
+              - echo
+              - ok
+            failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ws/healthz/
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 256Mi
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-blue-config
+                key: db_host
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-blue-config
+                key: db_port
+          - name: DB_USERNAME
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-blue-config
+                key: db_username
+          - name: DB_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-blue-config
+                key: db_password
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-blue-config
+                key: db_name
+          - name: DB_REPLICASET
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-blue-config
+                key: db_replicaset
+          - name: APPNAME
+            valueFrom:
+              configMapKeyRef:
+                name: mlbparks-blue-config
+                key: app_name
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers: []
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: mlbparks-green
+    name: mlbparks
+  spec:
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: mlbparks-green
+      weight: 100
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: mlbparks-green
+      type: parksmap-backend
+    name: mlbparks-green
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: mlbparks-green
+      deploymentconfig: mlbparks-green
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: mlbparks-blue
+    name: mlbparks-blue
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: mlbparks-blue
+      deploymentconfig: mlbparks-blue
+    sessionAffinity: None
+    type: ClusterIP
+parameters:
+- name: DB_HOST
+  displayName: DB_HOST
+  description: db host
+  value: mongodb
+  required: true
+- name: DB_PORT
+  displayName: DB_PORT
+  description: db port
+  value: "27017"
+  required: true
+- name: DB_USERNAME
+  displayName: DB_USERNAME
+  description: db username
+  value: mongodb
+  required: true
+- name: DB_PASSWORD
+  displayName: DB_PASSWORD
+  description: db password
+  value: mongodb
+  required: true
+- name: DB_NAME
+  displayName: DB_NAME
+  description: db name
+  value: parks
+  required: true
+- name: DB_REPLICASET
+  displayName: DB_REPLICASET
+  description: db replicaset
+  value: rs0
+  required: true

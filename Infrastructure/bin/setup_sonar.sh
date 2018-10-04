@@ -15,19 +15,10 @@ echo "Setting up Sonarqube in project $GUID-sonarqube"
 
 # To be Implemented by Student
 
-oc policy add-role-to-user admin system:serviceaccount:gpte-jenkins:jenkins -n ${GUID}-sonarqube
-oc policy add-role-to-user view system:serviceaccount:gpte-jenkins:jenkins -n ${GUID}-sonarqube
-oc policy add-role-to-user edit system:serviceaccount:gpte-jenkins:jenkins -n ${GUID}-sonarqube
-
-echo "===================[new-app sonarqube]==================================="
-oc process -f ./Infrastructure/templates/sonarqube-template.yaml -p GUID=${GUID} -n ${GUID}-sonarqube | oc create -n ${GUID}-sonarqube -f -
-
-while : ; do
-   echo "Checking SonarQube is Ready..."
-   oc get pod -n ${GUID}-sonarqube | grep -v "deploy\|build" | grep "sonarqube" | grep -q "1/1"
-   [[ "$?" == "1" ]] || break
-   echo "Sleeping 20 seconds for ${GUID}-sonarqube."
-   sleep 20
-done
-
-echo "SonarQube has been started successfully"
+oc new-app -f ./Infrastructure/templates/sonar-template.yaml \
+ --param SONARQUBE_VERSION=6.7.4 \
+ --param POSTGRESQL_PASSWORD=sonar \
+ --param POSTGRESQL_VOLUME_CAPACITY=4Gi \
+ --param SONAR_VOLUME_CAPACITY=4Gi \
+ --param GUID=${GUID} \
+ -n ${GUID}-sonarqube

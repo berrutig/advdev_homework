@@ -14,88 +14,46 @@ echo "Setting up Parks Production Environment in project ${GUID}-parks-prod"
 
 # To be Implemented by Student
 
-oc policy add-role-to-group system:image-puller system:serviceaccounts:${GUID}-parks-prod -n ${GUID}-parks-dev
 oc policy add-role-to-user edit system:serviceaccount:${GUID}-jenkins:jenkins -n ${GUID}-parks-prod
+oc policy add-role-to-group system:image-puller system:serviceaccounts:${GUID}-parks-prod -n ${GUID}-parks-dev
 oc policy add-role-to-user view --serviceaccount=default -n ${GUID}-parks-prod
 
-echo "===================[create mongodb_statefulset]=========================="
-oc process -f ./Infrastructure/templates/mongodb_statefulset.yaml -n ${GUID}-parks-prod | oc create -n ${GUID}-parks-prod -f -
+DB_HOST="mongodb"
+DB_USERNAME="mongodb"
+DB_PASSWORD="mongodb"
+DB_NAME="parks"
+DB_REPLICASET="rs0"
+DB_KEYFILE_VALUE="12345678901234567890"
 
-oc expose svc/mongodb-internal -n ${GUID}-parks-prod
-oc expose svc/mongodb -n ${GUID}-parks-prod
+# Create DB
+oc new-app -f ./Infrastructure/templates/mongodb-statefulset-template.yaml \
+--param MONGODB_ADMIN_PASSWORD=mongodb_admin_password \
+--param MONGODB_USER=${DB_USERNAME} \
+--param MONGODB_PASSWORD=${DB_PASSWORD} \
+--param MONGODB_DATABASE=${DB_NAME} \
+--param MONGODB_REPLICA_NAME=${DB_REPLICASET} \
+--param MONGODB_KEYFILE_VALUE=${DB_KEYFILE_VALUE} \
+--param VOLUME_CAPACITY=1Gi \
+--param MEMORY_LIMIT=1Gi \
+-n ${GUID}-parks-prod
 
-echo "===================[new-app mlbparks-blue]==============================="
-oc new-app ${GUID}-parks-dev/mlbparks:latest --name=mlbparks-blue  --allow-missing-imagestream-tags=true -n ${GUID}-parks-prod
-echo "===================[new-app mlbparks-green]=============================="
-oc new-app ${GUID}-parks-dev/mlbparks:latest --name=mlbparks-green --allow-missing-imagestream-tags=true -n ${GUID}-parks-prod
+# Create apps
+oc new-app -f ./Infrastructure/templates/mlbparks-prod-template.yaml \
+--param DB_HOST=${DB_HOST} \
+--param DB_PORT=27017 \
+--param DB_USERNAME=${DB_USERNAME} \
+--param DB_PASSWORD=${DB_PASSWORD} \
+--param DB_NAME=${DB_NAME} \
+--param DB_REPLICASET=${DB_REPLICASET} \
+-n ${GUID}-parks-prod
 
-oc patch dc/mlbparks-blue  --patch='{ "spec": { "strategy": { "type": "Recreate" }}}' -n ${GUID}-parks-prod
-oc patch dc/mlbparks-green --patch='{ "spec": { "strategy": { "type": "Recreate" }}}' -n ${GUID}-parks-prod
+oc new-app -f ./Infrastructure/templates/nationalparks-prod-template.yaml \
+--param DB_HOST=${DB_HOST} \
+--param DB_PORT=27017 \
+--param DB_USERNAME=${DB_USERNAME} \
+--param DB_PASSWORD=${DB_PASSWORD} \
+--param DB_NAME=${DB_NAME} \
+--param DB_REPLICASET=${DB_REPLICASET} \
+-n ${GUID}-parks-prod
 
-oc set triggers dc/mlbparks-blue  --remove-all -n ${GUID}-parks-prod
-oc set triggers dc/mlbparks-green --remove-all -n ${GUID}-parks-prod
-
-echo "===================[create-configmap mlbparks-config]===================="
-oc create configmap mlbparks-config --from-literal="APPNAME=MLB Parks (Green)" \
-    --from-literal="DB_HOST=mongodb" \
-    --from-literal="DB_PORT=27017" \
-    --from-literal="DB_USERNAME=mongodb" \
-    --from-literal="DB_PASSWORD=mongodb" \
-    --from-literal="DB_NAME=mongodb" \
-    --from-literal="DB_REPLICASET=rs0" \
-    -n ${GUID}-parks-prod
-
-oc set env dc/mlbparks-green --from=configmap/mlbparks-config -n ${GUID}-parks-prod
-
-oc expose dc/mlbparks-green --port 8080 -n ${GUID}-parks-prod
-
-oc expose svc/mlbparks-green --name mlbparks -n ${GUID}-parks-prod
-
-
-echo "===================[new-app nationalparks-blue]=========================="
-oc new-app ${GUID}-parks-dev/nationalparks:latest --name=nationalparks-blue  --allow-missing-imagestream-tags=true -n ${GUID}-parks-prod
-echo "===================[new-app nationalparks-green]========================="
-oc new-app ${GUID}-parks-dev/nationalparks:latest --name=nationalparks-green --allow-missing-imagestream-tags=true -n ${GUID}-parks-prod
-
-oc patch dc/nationalparks-blue  --patch='{ "spec": { "strategy": { "type": "Recreate" }}}' -n ${GUID}-parks-prod
-oc patch dc/nationalparks-green --patch='{ "spec": { "strategy": { "type": "Recreate" }}}' -n ${GUID}-parks-prod
-
-oc set triggers dc/nationalparks-blue  --remove-all -n ${GUID}-parks-prod
-oc set triggers dc/nationalparks-green --remove-all -n ${GUID}-parks-prod
-
-echo "===================[create-configmap nationalparks-config]==============="
-oc create configmap nationalparks-config --from-literal="APPNAME=National Parks (Green)" \
-    --from-literal="DB_HOST=mongodb" \
-    --from-literal="DB_PORT=27017" \
-    --from-literal="DB_USERNAME=mongodb" \
-    --from-literal="DB_PASSWORD=mongodb" \
-    --from-literal="DB_NAME=mongodb" \
-    --from-literal="DB_REPLICASET=rs0" \
-    -n ${GUID}-parks-prod
-
-oc set env dc/nationalparks-green --from=configmap/nationalparks-config -n ${GUID}-parks-prod
-
-oc expose dc/nationalparks-green --port 8080 -n ${GUID}-parks-prod
-
-oc expose svc/nationalparks-green --name nationalparks -n ${GUID}-parks-prod
-
-
-echo "===================[new-app parksmap-blue]==============================="
-oc new-app ${GUID}-parks-dev/parksmap:latest --name=parksmap-blue  --allow-missing-imagestream-tags=true -n ${GUID}-parks-prod
-echo "===================[new-app parksmap-green]=============================="
-oc new-app ${GUID}-parks-dev/parksmap:latest --name=parksmap-green --allow-missing-imagestream-tags=true -n ${GUID}-parks-prod
-
-oc patch dc/parksmap-blue  --patch='{ "spec": { "strategy": { "type": "Recreate" }}}' -n ${GUID}-parks-prod
-oc patch dc/parksmap-green --patch='{ "spec": { "strategy": { "type": "Recreate" }}}' -n ${GUID}-parks-prod
-
-oc set triggers dc/parksmap-blue  --remove-all -n ${GUID}-parks-prod
-oc set triggers dc/parksmap-green --remove-all -n ${GUID}-parks-prod
-
-echo "===================[create-configmap parksmap-config]===================="
-oc create configmap parksmap-config --from-literal="APPNAME=ParksMap (Green)" -n ${GUID}-parks-prod
-
-oc set env dc/parksmap-green --from=configmap/parksmap-config -n ${GUID}-parks-prod
-
-oc expose dc/parksmap-green --port 8080 -n ${GUID}-parks-prod
-
-oc expose svc/parksmap-green --name parksmap -n ${GUID}-parks-prod
+oc new-app -f ./Infrastructure/templates/parksmap-prod-template.yaml -n ${GUID}-parks-prod
