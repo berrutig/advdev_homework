@@ -20,7 +20,7 @@ podTemplate(
     echo "CLUSTER: ${CLUSTER}"
     echo "serviceId: ${serviceId}"
 
-    def mvnCmd = "mvn -s ./nexus_settings.xml"
+    def mvnCmd = "mvn -s ../nexus_settings.xml"
 
     // Checkout Source Code
     stage('Checkout Source') {
