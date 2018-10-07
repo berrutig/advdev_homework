@@ -50,7 +50,9 @@ podTemplate(
       // Do not run tests in this step
       stage('Build war') {
         echo "Building version ${version}"
-        sh "${mvnCmd} clean package -DskipTests"
+        //sh "${mvnCmd} clean package -DskipTests"
+        sh "${mvnCmd} clean package -Dmaven.test.skip=true"
+    
       }
 
       // Using Maven run the unit tests
@@ -62,7 +64,7 @@ podTemplate(
       // Using Maven call SonarQube for Code Analysis
       stage('Code Analysis') {
         echo "Running Code Analysis"
-        sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.${CLUSTER}/ -Dsonar.projectName=${JOB_BASE_NAME}-${devTag}"
+      //  sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.${CLUSTER}/ -Dsonar.projectName=${JOB_BASE_NAME}-${devTag}"
       }
 
       // Publish the built war file to Nexus
